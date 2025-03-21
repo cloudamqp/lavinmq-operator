@@ -112,6 +112,8 @@ var _ = Describe("LavinMQ Controller", func() {
 			lavinmq.Spec.Ports = []corev1.ContainerPort{
 				{ContainerPort: 1337, Name: "amqp", Protocol: "TCP"},
 			}
+			lavinmq.Spec.Image = "cloudamqp/lavinmq:2.3.0"
+			lavinmq.Spec.Replicas = 3
 		})
 
 		It("Should respect provided container ports", func() {
@@ -121,6 +123,20 @@ var _ = Describe("LavinMQ Controller", func() {
 			Expect(resource.Spec.Ports).To(Equal([]corev1.ContainerPort{
 				{ContainerPort: 1337, Name: "amqp", Protocol: "TCP"},
 			}))
+		})
+
+		It("Should respect provided image", func() {
+			resource := &cloudamqpcomv1alpha1.LavinMQ{}
+			err := k8sClient.Get(ctx, typeNamespacedName, resource)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resource.Spec.Image).To(Equal("cloudamqp/lavinmq:2.3.0"))
+		})
+
+		It("Should respect provided replicas", func() {
+			resource := &cloudamqpcomv1alpha1.LavinMQ{}
+			err := k8sClient.Get(ctx, typeNamespacedName, resource)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resource.Spec.Replicas).To(Equal(int32(3)))
 		})
 	})
 })

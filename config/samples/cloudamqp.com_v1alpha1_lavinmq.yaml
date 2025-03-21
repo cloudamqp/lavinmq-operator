@@ -8,8 +8,6 @@ metadata:
 spec:
   replicas: 1
   ports:
-    - containerPort: 5672
-      name: amqp
     - containerPort: 15672
       name: http
   dataVolumeClaim:
