@@ -177,7 +177,7 @@ func labelsForEtcd(instance *cloudamqpcomv1alpha1.Etcd) map[string]string {
 
 	return map[string]string{
 		"app.kubernetes.io/name":       "lavinmq-operator",
-		"app.kubernetes.io/managed-by": "LavinMQController",
+		"app.kubernetes.io/managed-by": "EtcdController",
 		"app.kubernetes.io/version":    version,
 	}
 }
