@@ -66,7 +66,7 @@ type LavinMQReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.19.0/pkg/reconcile
 func (r *LavinMQReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := log.FromContext(ctx)
+	logger := log.FromContext(ctx)
 
 	// TODO(user): your logic here
 	fmt.Printf("Reconciling LavinMQ %s\n", req.NamespacedName)
@@ -75,24 +75,24 @@ func (r *LavinMQReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	err := r.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			log.Info("LavinMQ not found, either deleted or never created")
-			return ctrl.Result{}, nil
+			logger.Info("LavinMQ not found, either deleted or never created")
+			return ctrl.Result{}, err
 		}
 
-		log.Error(err, "Failed to get LavinMQ")
+		logger.Error(err, "Failed to get LavinMQ")
 		return ctrl.Result{}, err
 	}
 
-	log.Info("LavinMQ found", "name", instance.Name)
+	logger.Info("LavinMQ found", "name", instance.Name)
 
 	found := &appsv1.StatefulSet{}
 	err = r.Get(ctx, types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, found)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			log.Info("StatefulSet not found, creating")
+			logger.Info("StatefulSet not found, creating")
 			statefulset, err := r.createStatefulSet(ctx, instance)
 			if err != nil {
-				log.Error(err, "Failed to create StatefulSet for LavinMQ")
+				logger.Error(err, "Failed to create StatefulSet for LavinMQ")
 
 				meta.SetStatusCondition(&instance.Status.Conditions, metav1.Condition{
 					Type:    typeAvailableLavinMQ, // TODO: Is this correct?
@@ -102,29 +102,29 @@ func (r *LavinMQReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 				})
 
 				if err := r.Status().Update(ctx, instance); err != nil {
-					log.Error(err, "Failed to update LavinMQ status")
+					logger.Error(err, "Failed to update LavinMQ status")
 					return ctrl.Result{}, err
 				}
 
 				return ctrl.Result{}, err
 			}
 
-			log.Info("Creating StatefulSet for LavinMQ", "name", statefulset.Name)
+			logger.Info("Creating StatefulSet for LavinMQ", "name", statefulset.Name)
 
 			if err := r.Create(ctx, statefulset); err != nil {
-				log.Error(err, "Failed to create StatefulSet for LavinMQ",
+				logger.Error(err, "Failed to create StatefulSet for LavinMQ",
 					"Deployment.Namespace", statefulset.Namespace,
 					"Deployment.Name", statefulset.Name)
 				return ctrl.Result{}, err
 			}
 
-			log.Info("Created StatefulSet for LavinMQ", "name", statefulset.Name)
+			logger.Info("Created StatefulSet for LavinMQ", "name", statefulset.Name)
 
 			return ctrl.Result{RequeueAfter: time.Minute}, nil
 		}
 	}
 
-	log.Info("StatefulSet found, reconciling")
+	logger.Info("StatefulSet found, reconciling")
 
 	return ctrl.Result{}, nil
 }

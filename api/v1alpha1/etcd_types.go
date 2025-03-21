@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -28,8 +29,22 @@ type EtcdSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Foo is an example field of Etcd. Edit etcd_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	// +kubebuilder:default="bitnami/etcd:3.5.19"
+	// +optional
+	Image string `json:"image,omitempty"`
+
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=3
+	// +kubebuilder:default=1
+	// +optional
+	Replicas int32 `json:"replicas,omitempty"`
+
+	// +kubebuilder:default={{containerPort:2379,name:"client"},{containerPort:2380,name:"peer"}}
+	// +optional
+	Ports []corev1.ContainerPort `json:"ports,omitempty"`
+
+	// +required
+	DataVolumeClaimSpec corev1.PersistentVolumeClaimSpec `json:"dataVolumeClaim"`
 }
 
 // EtcdStatus defines the observed state of Etcd
