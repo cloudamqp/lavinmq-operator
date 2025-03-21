@@ -29,7 +29,7 @@ type EtcdSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// +kubebuilder:default="bitnami/etcd:3.5.19"
+	// +kubebuilder:default="quay.io/coreos/etcd:v3.5.19"
 	// +optional
 	Image string `json:"image,omitempty"`
 
