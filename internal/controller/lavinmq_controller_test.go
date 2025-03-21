@@ -107,13 +107,11 @@ var _ = Describe("LavinMQ Controller", func() {
 		})
 	})
 
-	Context("When creating a custom lavinmq resource", func() {
+	Context("When creating a lavinmq cluster with custom ports", func() {
 		BeforeEach(func() {
 			lavinmq.Spec.Ports = []corev1.ContainerPort{
 				{ContainerPort: 1337, Name: "amqp", Protocol: "TCP"},
 			}
-			lavinmq.Spec.Image = "cloudamqp/lavinmq:2.3.0"
-			lavinmq.Spec.Replicas = 3
 		})
 
 		It("Should respect provided container ports", func() {
@@ -124,12 +122,24 @@ var _ = Describe("LavinMQ Controller", func() {
 				{ContainerPort: 1337, Name: "amqp", Protocol: "TCP"},
 			}))
 		})
+	})
+
+	Context("When creating a lavinmq cluster with custom image", func() {
+		BeforeEach(func() {
+			lavinmq.Spec.Image = "cloudamqp/lavinmq:2.3.0"
+		})
 
 		It("Should respect provided image", func() {
 			resource := &cloudamqpcomv1alpha1.LavinMQ{}
 			err := k8sClient.Get(ctx, typeNamespacedName, resource)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(resource.Spec.Image).To(Equal("cloudamqp/lavinmq:2.3.0"))
+		})
+	})
+
+	Context("When creating a lavinmq cluster with custom image", func() {
+		BeforeEach(func() {
+			lavinmq.Spec.Replicas = 3
 		})
 
 		It("Should respect provided replicas", func() {
