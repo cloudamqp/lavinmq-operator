@@ -4,6 +4,7 @@ metadata:
   labels:
     app.kubernetes.io/name: operator-sdk
     app.kubernetes.io/managed-by: kustomize
+    app: etcd-sample
   name: etcd-sample
 spec:
   replicas: 1

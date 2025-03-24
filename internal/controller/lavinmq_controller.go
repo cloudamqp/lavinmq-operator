@@ -76,7 +76,7 @@ func (r *LavinMQReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			logger.Info("LavinMQ not found, either deleted or never created")
-			return ctrl.Result{}, err
+			return ctrl.Result{}, nil
 		}
 
 		logger.Error(err, "Failed to get LavinMQ")
@@ -174,6 +174,8 @@ func (r *LavinMQReconciler) createStatefulSet(ctx context.Context, instance *clo
 									MountPath: "/var/lib/lavinmq",
 								},
 							},
+							Command: []string{"/bin/sh", "-c",
+								fmt.Sprintf("lavinmq -b 0.0.0.0 --clustering --clustering-bind :: --clustering-advertised-uri=tcp://lavinmq-0:5679 --clustering-etcd-endpoints=%s:2379 --log-level=debug", "etcd-sample")},
 						},
 					},
 				},
