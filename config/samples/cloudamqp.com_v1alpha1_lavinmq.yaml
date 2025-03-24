@@ -10,6 +10,8 @@ spec:
   ports:
     - containerPort: 15672
       name: http
+    - containerPort: 5672
+      name: amqp
   dataVolumeClaim:
     accessModes:
       - ReadWriteOnce

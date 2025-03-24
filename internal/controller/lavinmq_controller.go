@@ -19,10 +19,12 @@ package controller
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"strings"
 	"time"
 
 	cloudamqpcomv1alpha1 "lavinmq-operator/api/v1alpha1"
+	builder "lavinmq-operator/internal/controller/lavin/builders"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -85,8 +87,8 @@ func (r *LavinMQReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 	logger.Info("LavinMQ found", "name", instance.Name)
 
-	found := &appsv1.StatefulSet{}
-	err = r.Get(ctx, types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, found)
+	sts := &appsv1.StatefulSet{}
+	err = r.Get(ctx, types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, sts)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			logger.Info("StatefulSet not found, creating")
@@ -120,11 +122,67 @@ func (r *LavinMQReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 			logger.Info("Created StatefulSet for LavinMQ", "name", statefulset.Name)
 
+			builder := builder.ServiceConfigBuilder{
+				Instance: instance,
+				Scheme:   r.Scheme,
+			}
+
+			configMap, err := builder.Build()
+			if err != nil {
+				logger.Error(err, "Failed to create ConfigMap for LavinMQ")
+				return ctrl.Result{}, err
+			}
+
+			if err := r.Create(ctx, configMap); err != nil {
+				logger.Error(err, "Failed to create ConfigMap for LavinMQ")
+				return ctrl.Result{}, err
+			}
+
 			return ctrl.Result{RequeueAfter: time.Minute}, nil
 		}
 	}
 
-	logger.Info("StatefulSet found, reconciling")
+	for _, container := range sts.Spec.Template.Spec.Containers {
+		if container.Name == "lavinmq" {
+			if reflect.DeepEqual(instance.Spec.Ports, container.Ports) {
+				fmt.Printf("Ports are the same, skipping %v %v\n", instance.Spec.Ports, container.Ports)
+				logger.Info("Ports are the same, skipping")
+				break
+			}
+			logger.Info("Ports are different, updating")
+			builder := builder.ServiceConfigBuilder{
+				Instance: instance,
+				Scheme:   r.Scheme,
+			}
+
+			configMap, err := builder.Build()
+			if err != nil {
+				logger.Error(err, "Failed to create ConfigMap for LavinMQ")
+				return ctrl.Result{}, err
+			}
+
+			if err := r.Update(ctx, configMap); err != nil {
+				logger.Error(err, "Failed to update ConfigMap for LavinMQ")
+				return ctrl.Result{}, err
+			}
+
+			logger.Info("Updated ConfigMap for LavinMQ", "name", configMap.Name)
+		}
+	}
+
+	logger.Info("Reapplying stuff")
+	statefulset, err := r.createStatefulSet(ctx, instance)
+	if err != nil {
+		logger.Error(err, "Failed to recreate StatefulSet for LavinMQ")
+		return ctrl.Result{}, err
+	}
+
+	if err := r.Update(ctx, statefulset); err != nil {
+		logger.Error(err, "Failed to update StatefulSet for LavinMQ")
+		return ctrl.Result{}, err
+	}
+
+	logger.Info("Updated StatefulSet for LavinMQ after port change", "name", sts.Name)
 
 	return ctrl.Result{}, nil
 }
@@ -134,6 +192,7 @@ func (r *LavinMQReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&cloudamqpcomv1alpha1.LavinMQ{}).
 		Owns(&appsv1.StatefulSet{}).
+		Owns(&corev1.ConfigMap{}).
 		// May need deployment idk
 		//Owns(&appsv1.Deployment{}).
 		Complete(r)
@@ -145,6 +204,7 @@ func (r *LavinMQReconciler) createStatefulSet(ctx context.Context, instance *clo
 	ports := instance.Spec.Ports
 	volume := instance.Spec.DataVolumeClaimSpec
 	volumeName := instance.Name + "-data"
+	configVolumeName := fmt.Sprintf("%s-config", instance.Name)
 
 	image := instance.Spec.Image
 	statefulset := &appsv1.StatefulSet{
@@ -173,9 +233,24 @@ func (r *LavinMQReconciler) createStatefulSet(ctx context.Context, instance *clo
 									Name:      volumeName,
 									MountPath: "/var/lib/lavinmq",
 								},
+								{
+									Name:      configVolumeName,
+									MountPath: "/etc/lavinmq",
+									ReadOnly:  true,
+								},
 							},
 							Command: []string{"/bin/sh", "-c",
-								fmt.Sprintf("lavinmq -b 0.0.0.0 --clustering --clustering-bind :: --clustering-advertised-uri=tcp://lavinmq-0:5679 --clustering-etcd-endpoints=%s:2379 --log-level=debug", "etcd-sample")},
+								fmt.Sprintf("lavinmq --clustering --clustering-bind :: --clustering-advertised-uri=tcp://lavinmq-0:5679 --clustering-etcd-endpoints=%s:2379 --log-level=debug", "etcd-sample")},
+						},
+					},
+					Volumes: []corev1.Volume{
+						{
+							Name: configVolumeName,
+							VolumeSource: corev1.VolumeSource{
+								ConfigMap: &corev1.ConfigMapVolumeSource{
+									LocalObjectReference: corev1.LocalObjectReference{Name: configVolumeName},
+								},
+							},
 						},
 					},
 				},
