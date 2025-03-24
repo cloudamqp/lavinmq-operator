@@ -25,7 +25,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	cloudamqpcomv1alpha1 "lavinmq-operator/api/v1alpha1"
@@ -60,12 +59,11 @@ var _ = Describe("LavinMQ Controller", func() {
 		}
 	})
 	Context("When a instance of LavinMQ doesn't exist", func() {
-		It("Should return a NotFound error", func() {
+		It("Should not return a error", func() {
 			_, err := reconciler.Reconcile(ctx, reconcile.Request{
 				NamespacedName: typeNamespacedName,
 			})
-			Expect(err).To(HaveOccurred())
-			Expect(apierrors.IsNotFound(err)).To(BeTrue())
+			Expect(err).NotTo(HaveOccurred())
 		})
 	})
 
