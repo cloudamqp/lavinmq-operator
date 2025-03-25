@@ -238,6 +238,10 @@ spec:
                       backing this claim.
                     type: string
                 type: object
+              etcdEndpoints:
+                items:
+                  type: string
+                type: array
               image:
                 default: cloudamqp/lavinmq:2.2.0
                 type: string

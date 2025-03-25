@@ -24,6 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -68,17 +69,6 @@ var _ = Describe("LavinMQ Controller", func() {
 	})
 
 	Context("When a instance of LavinMQ exists", func() {
-		JustBeforeEach(func() {
-			By("creating the custom resource for the Kind LavinMQ")
-			Expect(k8sClient.Create(ctx, lavinmq)).To(Succeed())
-
-			By("reconciling the resource")
-			_, err := reconciler.Reconcile(ctx, reconcile.Request{
-				NamespacedName: typeNamespacedName,
-			})
-			Expect(err).NotTo(HaveOccurred())
-		})
-
 		AfterEach(func() {
 			// TODO(user): Cleanup logic after each test, like removing the resource instance.
 			resource := &cloudamqpcomv1alpha1.LavinMQ{}
@@ -90,6 +80,11 @@ var _ = Describe("LavinMQ Controller", func() {
 		})
 
 		Context("When creating a default lavinmq resource", func() {
+			BeforeEach(func() {
+				By("creating the custom resource for the Kind LavinMQ")
+				Expect(k8sClient.Create(ctx, lavinmq)).To(Succeed())
+			})
+
 			It("should verify the default container ports", func() {
 				resource := &cloudamqpcomv1alpha1.LavinMQ{}
 				err := k8sClient.Get(ctx, typeNamespacedName, resource)
@@ -121,6 +116,7 @@ var _ = Describe("LavinMQ Controller", func() {
 				lavinmq.Spec.Ports = []corev1.ContainerPort{
 					{ContainerPort: 1337, Name: "amqp", Protocol: "TCP"},
 				}
+				Expect(k8sClient.Create(ctx, lavinmq)).To(Succeed())
 			})
 
 			It("Should respect provided container ports", func() {
@@ -136,6 +132,7 @@ var _ = Describe("LavinMQ Controller", func() {
 		Context("When creating a lavinmq cluster with custom image", func() {
 			BeforeEach(func() {
 				lavinmq.Spec.Image = "cloudamqp/lavinmq:2.3.0"
+				Expect(k8sClient.Create(ctx, lavinmq)).To(Succeed())
 			})
 
 			It("Should respect provided image", func() {
@@ -149,6 +146,7 @@ var _ = Describe("LavinMQ Controller", func() {
 		Context("When creating a lavinmq cluster with custom image", func() {
 			BeforeEach(func() {
 				lavinmq.Spec.Replicas = 3
+				Expect(k8sClient.Create(ctx, lavinmq)).To(Succeed())
 			})
 
 			It("Should respect provided replicas", func() {
@@ -156,6 +154,52 @@ var _ = Describe("LavinMQ Controller", func() {
 				err := k8sClient.Get(ctx, typeNamespacedName, resource)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(resource.Spec.Replicas).To(Equal(int32(3)))
+			})
+		})
+
+		Context("When updating the ports of the lavinmq cluster", func() {
+			BeforeEach(func() {
+				Expect(k8sClient.Create(ctx, lavinmq)).To(Succeed())
+				lavinmq.Spec.Ports = []corev1.ContainerPort{
+					{ContainerPort: 1337, Name: "amqp", Protocol: "TCP"},
+				}
+				Expect(k8sClient.Update(ctx, lavinmq)).To(Succeed())
+			})
+
+			It("Should update the ports of the lavinmq cluster", func() {
+				By("reconciling the resource")
+				result, err := reconciler.Reconcile(ctx, reconcile.Request{
+					NamespacedName: typeNamespacedName,
+				})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).To(Equal(reconcile.Result{}))
+				resource := &appsv1.StatefulSet{}
+				err = k8sClient.Get(ctx, typeNamespacedName, resource)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(resource.Spec.Template.Spec.Containers[0].Ports).To(Equal([]corev1.ContainerPort{
+					{ContainerPort: 1337, Name: "amqp", Protocol: "TCP"},
+				}))
+			})
+		})
+
+		Context("When updating the image of the lavinmq cluster", func() {
+			BeforeEach(func() {
+				Expect(k8sClient.Create(ctx, lavinmq)).To(Succeed())
+				lavinmq.Spec.Image = "cloudamqp/lavinmq:2.3.0"
+				Expect(k8sClient.Update(ctx, lavinmq)).To(Succeed())
+			})
+
+			It("Should update the image of the lavinmq cluster", func() {
+				By("reconciling the resource")
+				result, err := reconciler.Reconcile(ctx, reconcile.Request{
+					NamespacedName: typeNamespacedName,
+				})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).To(Equal(reconcile.Result{}))
+				resource := &appsv1.StatefulSet{}
+				err = k8sClient.Get(ctx, typeNamespacedName, resource)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(resource.Spec.Template.Spec.Containers[0].Image).To(Equal("cloudamqp/lavinmq:2.3.0"))
 			})
 		})
 	})

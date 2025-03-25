@@ -45,6 +45,9 @@ type LavinMQSpec struct {
 
 	// +required
 	DataVolumeClaimSpec corev1.PersistentVolumeClaimSpec `json:"dataVolumeClaim"`
+
+	// +optional
+	EtcdEndpoints []string `json:"etcdEndpoints,omitempty"`
 }
 
 // LavinMQStatus defines the observed state of LavinMQ

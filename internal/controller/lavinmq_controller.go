@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
-	"time"
 
 	cloudamqpcomv1alpha1 "lavinmq-operator/api/v1alpha1"
 	builder "lavinmq-operator/internal/controller/lavin/builders"
@@ -92,7 +91,7 @@ func (r *LavinMQReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			logger.Info("StatefulSet not found, creating")
-			statefulset, err := r.createStatefulSet(ctx, instance)
+			sts, err = r.createStatefulSet(ctx, instance)
 			if err != nil {
 				logger.Error(err, "Failed to create StatefulSet for LavinMQ")
 
@@ -111,16 +110,16 @@ func (r *LavinMQReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 				return ctrl.Result{}, err
 			}
 
-			logger.Info("Creating StatefulSet for LavinMQ", "name", statefulset.Name)
+			logger.Info("Creating StatefulSet for LavinMQ", "name", sts.Name)
 
-			if err := r.Create(ctx, statefulset); err != nil {
+			if err := r.Create(ctx, sts); err != nil {
 				logger.Error(err, "Failed to create StatefulSet for LavinMQ",
-					"Deployment.Namespace", statefulset.Namespace,
-					"Deployment.Name", statefulset.Name)
+					"Deployment.Namespace", sts.Namespace,
+					"Deployment.Name", sts.Name)
 				return ctrl.Result{}, err
 			}
 
-			logger.Info("Created StatefulSet for LavinMQ", "name", statefulset.Name)
+			logger.Info("Created StatefulSet for LavinMQ", "name", sts.Name)
 
 			builder := builder.ServiceConfigBuilder{
 				Instance: instance,
@@ -137,18 +136,16 @@ func (r *LavinMQReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 				logger.Error(err, "Failed to create ConfigMap for LavinMQ")
 				return ctrl.Result{}, err
 			}
-
-			return ctrl.Result{RequeueAfter: time.Minute}, nil
 		}
 	}
 
-	for _, container := range sts.Spec.Template.Spec.Containers {
+	for index, container := range sts.Spec.Template.Spec.Containers {
 		if container.Name == "lavinmq" {
 			if reflect.DeepEqual(instance.Spec.Ports, container.Ports) {
-				fmt.Printf("Ports are the same, skipping %v %v\n", instance.Spec.Ports, container.Ports)
 				logger.Info("Ports are the same, skipping")
 				break
 			}
+			sts.Spec.Template.Spec.Containers[index].Ports = instance.Spec.Ports
 			logger.Info("Ports are different, updating")
 			builder := builder.ServiceConfigBuilder{
 				Instance: instance,
@@ -170,14 +167,20 @@ func (r *LavinMQReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		}
 	}
 
-	logger.Info("Reapplying stuff")
-	statefulset, err := r.createStatefulSet(ctx, instance)
-	if err != nil {
-		logger.Error(err, "Failed to recreate StatefulSet for LavinMQ")
-		return ctrl.Result{}, err
+	for index, container := range sts.Spec.Template.Spec.Containers {
+		if container.Name == "lavinmq" {
+			if reflect.DeepEqual(instance.Spec.Image, container.Image) {
+				logger.Info("Image is the same, skipping")
+				break
+			}
+
+			sts.Spec.Template.Spec.Containers[index].Image = instance.Spec.Image
+			logger.Info("Image is different, updating")
+		}
 	}
 
-	if err := r.Update(ctx, statefulset); err != nil {
+	logger.Info("Reapplying stuff")
+	if err := r.Update(ctx, sts); err != nil {
 		logger.Error(err, "Failed to update StatefulSet for LavinMQ")
 		return ctrl.Result{}, err
 	}
@@ -239,8 +242,6 @@ func (r *LavinMQReconciler) createStatefulSet(ctx context.Context, instance *clo
 									ReadOnly:  true,
 								},
 							},
-							Command: []string{"/bin/sh", "-c",
-								fmt.Sprintf("lavinmq --clustering --clustering-bind :: --clustering-advertised-uri=tcp://lavinmq-0:5679 --clustering-etcd-endpoints=%s:2379 --log-level=debug", "etcd-sample")},
 						},
 					},
 					Volumes: []corev1.Volume{

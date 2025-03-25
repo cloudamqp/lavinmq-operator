@@ -12,6 +12,8 @@ spec:
       name: http
     - containerPort: 5672
       name: amqp
+  etcdEndpoints:
+    - etcd-sample:2379
   dataVolumeClaim:
     accessModes:
       - ReadWriteOnce

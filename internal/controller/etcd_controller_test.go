@@ -32,7 +32,7 @@ import (
 
 var _ = Describe("Etcd Controller", func() {
 	Context("When reconciling a resource", func() {
-		const resourceName = "test-resource"
+		const resourceName = "test-resource-etcd"
 
 		ctx := context.Background()
 

@@ -21,7 +21,7 @@ type ServiceConfigBuilder struct {
 var (
 	defaultConfig = `
 	[main]
-log_level = info
+log_level = debug
 data_dir = /var/lib/lavinmq
 
 [mgmt]
@@ -34,6 +34,13 @@ heartbeat = 300
 ;unix_path = /run/lavinmq/amqp.sock
 ;unix_proxy_protocol = 1
 	`
+
+	clusteringConfig = `
+[clustering]
+enabled = true
+bind = 0.0.0.0
+port = 5679
+`
 )
 
 // BuildConfigMap creates a ConfigMap for LavinMQ configuration
@@ -53,25 +60,42 @@ func (b *ServiceConfigBuilder) Build() (*corev1.ConfigMap, error) {
 		Data: map[string]string{},
 	}
 
-	iniFile, err := ini.Load([]byte(defaultConfig))
+	defaultConfig, err := ini.Load([]byte(defaultConfig))
 	if err != nil {
 		return nil, fmt.Errorf("failed to load default config: %w", err)
 	}
 
 	for _, port := range b.Instance.Spec.Ports {
 		if port.Name == "http" {
-			iniFile.Section("mgmt").Key("port").SetValue(fmt.Sprintf("%d", port.ContainerPort))
+			defaultConfig.Section("mgmt").Key("port").SetValue(fmt.Sprintf("%d", port.ContainerPort))
 		}
 		if port.Name == "amqp" {
-			iniFile.Section("amqp").Key("port").SetValue(fmt.Sprintf("%d", port.ContainerPort))
+			defaultConfig.Section("amqp").Key("port").SetValue(fmt.Sprintf("%d", port.ContainerPort))
 		}
 	}
 
+	clusterConfig, err := ini.Load([]byte(clusteringConfig))
+	if err != nil {
+		return nil, fmt.Errorf("failed to load cluster config: %w", err)
+	}
+
+	if b.Instance.Spec.EtcdEndpoints != nil {
+		clusterConfig.Section("clustering").Key("etcd_endpoints").SetValue(strings.Join(b.Instance.Spec.EtcdEndpoints, ","))
+	}
+
+	// TODO: Add advertised uri may be wrong here. Headless service?
+	clusterConfig.Section("clustering").Key("advertised_uri").SetValue(fmt.Sprintf("tcp://%s:5679", b.Instance.Name))
+
 	config := strings.Builder{}
 
-	_, err = iniFile.WriteTo(&config)
+	_, err = defaultConfig.WriteTo(&config)
 	if err != nil {
 		return nil, fmt.Errorf("failed to write config: %w", err)
+	}
+
+	_, err = clusterConfig.WriteTo(&config)
+	if err != nil {
+		return nil, fmt.Errorf("failed to write cluster config: %w", err)
 	}
 
 	configMap.Data["lavinmq.ini"] = config.String()
