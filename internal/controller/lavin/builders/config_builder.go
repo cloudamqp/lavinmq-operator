@@ -72,6 +72,12 @@ func (b *ServiceConfigBuilder) Build() (*corev1.ConfigMap, error) {
 		if port.Name == "amqp" {
 			defaultConfig.Section("amqp").Key("port").SetValue(fmt.Sprintf("%d", port.ContainerPort))
 		}
+		if port.Name == "https" {
+			defaultConfig.Section("mgmt").Key("tls_port").SetValue(fmt.Sprintf("%d", port.ContainerPort))
+		}
+		if port.Name == "amqps" {
+			defaultConfig.Section("amqp").Key("tls_port").SetValue(fmt.Sprintf("%d", port.ContainerPort))
+		}
 	}
 
 	clusterConfig, err := ini.Load([]byte(clusteringConfig))
@@ -87,6 +93,11 @@ func (b *ServiceConfigBuilder) Build() (*corev1.ConfigMap, error) {
 	clusterConfig.Section("clustering").Key("advertised_uri").SetValue(fmt.Sprintf("tcp://%s:5679", b.Instance.Name))
 
 	config := strings.Builder{}
+
+	if b.Instance.Spec.Secrets != nil {
+		defaultConfig.Section("main").Key("tls_cert").SetValue(fmt.Sprintf("/etc/lavinmq/tls/%s", "tls.crt"))
+		defaultConfig.Section("main").Key("tls_key").SetValue(fmt.Sprintf("/etc/lavinmq/tls/%s", "tls.key"))
+	}
 
 	_, err = defaultConfig.WriteTo(&config)
 	if err != nil {

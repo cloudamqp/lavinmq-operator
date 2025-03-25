@@ -209,6 +209,8 @@ func (r *LavinMQReconciler) createStatefulSet(ctx context.Context, instance *clo
 	volumeName := instance.Name + "-data"
 	configVolumeName := fmt.Sprintf("%s-config", instance.Name)
 
+	secretVolume, secretVolumeMount := r.referenceSecret(instance)
+
 	image := instance.Spec.Image
 	statefulset := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
@@ -241,6 +243,7 @@ func (r *LavinMQReconciler) createStatefulSet(ctx context.Context, instance *clo
 									MountPath: "/etc/lavinmq",
 									ReadOnly:  true,
 								},
+								*secretVolumeMount,
 							},
 						},
 					},
@@ -253,6 +256,7 @@ func (r *LavinMQReconciler) createStatefulSet(ctx context.Context, instance *clo
 								},
 							},
 						},
+						*secretVolume,
 					},
 				},
 			},
@@ -273,6 +277,29 @@ func (r *LavinMQReconciler) createStatefulSet(ctx context.Context, instance *clo
 	}
 
 	return statefulset, nil
+}
+
+func (r *LavinMQReconciler) referenceSecret(instance *cloudamqpcomv1alpha1.LavinMQ) (*corev1.Volume, *corev1.VolumeMount) {
+	if instance.Spec.Secrets == nil {
+		return nil, nil
+	}
+
+	volume := &corev1.Volume{
+		Name: "tls",
+		VolumeSource: corev1.VolumeSource{
+			Secret: &corev1.SecretVolumeSource{
+				SecretName: instance.Spec.Secrets[0].Name,
+			},
+		},
+	}
+
+	volumeMount := &corev1.VolumeMount{
+		Name:      "tls",
+		MountPath: "/etc/lavinmq/tls",
+		ReadOnly:  true,
+	}
+
+	return volume, volumeMount
 }
 
 func labelsForLavinMQ(instance *cloudamqpcomv1alpha1.LavinMQ) map[string]string {

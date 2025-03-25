@@ -48,6 +48,9 @@ type LavinMQSpec struct {
 
 	// +optional
 	EtcdEndpoints []string `json:"etcdEndpoints,omitempty"`
+
+	// +optional
+	Secrets []corev1.SecretReference `json:"secrets,omitempty"`
 }
 
 // LavinMQStatus defines the observed state of LavinMQ

@@ -12,11 +12,39 @@ spec:
       name: http
     - containerPort: 5672
       name: amqp
+    - containerPort: 15671
+      name: https
+    - containerPort: 5671
+      name: amqps
   etcdEndpoints:
     - etcd-sample:2379
+  secrets:
+    - name: lavinmq-tls
   dataVolumeClaim:
     accessModes:
       - ReadWriteOnce
     resources:
       requests:
         storage: 10Gi
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: lavinmq-sample
+  labels:
+    app.kubernetes.io/name: operator-sdk
+    app.kubernetes.io/managed-by: kustomize
+spec:
+  ports:
+    - port: 15672
+      name: http
+    - port: 5672
+      name: amqp
+    - port: 15671
+      name: https
+    - port: 5671
+      name: amqps
+  type: NodePort
+  selector:
+    app: lavinmq-sample
