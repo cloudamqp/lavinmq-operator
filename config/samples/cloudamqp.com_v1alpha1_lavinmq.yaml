@@ -4,6 +4,7 @@ metadata:
   labels:
     app.kubernetes.io/name: operator-sdk
     app.kubernetes.io/managed-by: kustomize
+    app: lavinmq-sample
   name: lavinmq-sample
 spec:
   replicas: 1

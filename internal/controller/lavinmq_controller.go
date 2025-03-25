@@ -306,9 +306,16 @@ func labelsForLavinMQ(instance *cloudamqpcomv1alpha1.LavinMQ) map[string]string 
 	image := instance.Spec.Image
 	version := strings.Split(image, ":")[1]
 
-	return map[string]string{
+	labels := map[string]string{
 		"app.kubernetes.io/name":       "lavinmq-operator",
 		"app.kubernetes.io/managed-by": "LavinMQController",
 		"app.kubernetes.io/version":    version,
 	}
+
+	// Append instance labels
+	for k, v := range instance.Labels {
+		labels[k] = v
+	}
+
+	return labels
 }
