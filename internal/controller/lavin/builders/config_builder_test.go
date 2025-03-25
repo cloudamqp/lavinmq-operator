@@ -8,7 +8,7 @@ import (
 	ini "gopkg.in/ini.v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/kubernetes/scheme"
 )
 
 func verifyConfigMapEquality(configMap *corev1.ConfigMap, expectedConfig string) {
@@ -38,7 +38,7 @@ var _ = Describe("ConfigBuilder", func() {
 	BeforeEach(func() {
 		builder = ServiceConfigBuilder{
 			Instance: instance,
-			Scheme:   runtime.NewScheme(),
+			Scheme:   scheme.Scheme,
 		}
 	})
 	Context("When building a default ConfigMap", func() {
