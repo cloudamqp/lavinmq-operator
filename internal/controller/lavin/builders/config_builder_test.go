@@ -43,22 +43,22 @@ var _ = Describe("ConfigBuilder", func() {
 	})
 	Context("When building a default ConfigMap", func() {
 		var expectedConfig = `
-[main]
-log_level = info
-data_dir = /var/lib/lavinmq
+			[main]
+			log_level = info
+			data_dir = /var/lib/lavinmq
 
-[mgmt]
-bind = 0.0.0.0
+			[mgmt]
+			bind = 0.0.0.0
 
-[amqp]
-bind = 0.0.0.0
-heartbeat = 300
+			[amqp]
+			bind = 0.0.0.0
+			heartbeat = 300
 
-[clustering]
-enabled = true
-bind = 0.0.0.0
-port = 5679
-advertised_uri = "tcp://test-resource:5679"
+			[clustering]
+			enabled = true
+			bind = 0.0.0.0
+			port = 5679
+			advertised_uri = tcp://test-resource:5679
 	`
 		It("Should return a default ConfigMap", func() {
 			configMap, err := builder.Build()
@@ -91,26 +91,26 @@ advertised_uri = "tcp://test-resource:5679"
 		})
 
 		expectedConfig := `
-	[main]
-	log_level = info
-	data_dir = /var/lib/lavinmq
+			[main]
+			log_level = info
+			data_dir = /var/lib/lavinmq
 
-	[mgmt]
-	bind = 0.0.0.0
-	port = 2222
-	tls_port = 4444
+			[mgmt]
+			bind = 0.0.0.0
+			port = 2222
+			tls_port = 4444
 
-	[amqp]
-	bind = 0.0.0.0
-	heartbeat = 300
-	port = 1111
-	tls_port = 3333
+			[amqp]
+			bind = 0.0.0.0
+			heartbeat = 300
+			port = 1111
+			tls_port = 3333
 
-	[clustering]
-	enabled = true
-	bind = 0.0.0.0
-	port = 5679
-	advertised_uri = "tcp://test-resource:5679"
+			[clustering]
+			enabled = true
+			bind = 0.0.0.0
+			port = 5679
+			advertised_uri = tcp://test-resource:5679
 		`
 
 		It("Should setup ports in according section", func() {
