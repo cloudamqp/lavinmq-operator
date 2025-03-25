@@ -243,7 +243,6 @@ func (r *LavinMQReconciler) createStatefulSet(ctx context.Context, instance *clo
 									MountPath: "/etc/lavinmq",
 									ReadOnly:  true,
 								},
-								*secretVolumeMount,
 							},
 						},
 					},
@@ -256,7 +255,6 @@ func (r *LavinMQReconciler) createStatefulSet(ctx context.Context, instance *clo
 								},
 							},
 						},
-						*secretVolume,
 					},
 				},
 			},
@@ -269,6 +267,18 @@ func (r *LavinMQReconciler) createStatefulSet(ctx context.Context, instance *clo
 				},
 			},
 		},
+	}
+
+	// Add secret volume and mount if they exist
+	if secretVolume != nil && secretVolumeMount != nil {
+		statefulset.Spec.Template.Spec.Containers[0].VolumeMounts = append(
+			statefulset.Spec.Template.Spec.Containers[0].VolumeMounts,
+			*secretVolumeMount,
+		)
+		statefulset.Spec.Template.Spec.Volumes = append(
+			statefulset.Spec.Template.Spec.Volumes,
+			*secretVolume,
+		)
 	}
 
 	// Setting owner reference
