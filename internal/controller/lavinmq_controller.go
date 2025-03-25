@@ -23,6 +23,7 @@ import (
 	"strings"
 
 	cloudamqpcomv1alpha1 "lavinmq-operator/api/v1alpha1"
+
 	builder "lavinmq-operator/internal/controller/lavin/builders"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -162,7 +163,6 @@ func (r *LavinMQReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 				logger.Error(err, "Failed to update ConfigMap for LavinMQ")
 				return ctrl.Result{}, err
 			}
-
 			logger.Info("Updated ConfigMap for LavinMQ", "name", configMap.Name)
 		}
 	}

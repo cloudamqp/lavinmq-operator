@@ -21,18 +21,15 @@ type ServiceConfigBuilder struct {
 var (
 	defaultConfig = `
 	[main]
-log_level = debug
+log_level = info
 data_dir = /var/lib/lavinmq
 
 [mgmt]
 bind = 0.0.0.0
-;unix_path = /run/lavinmq/http.sock
 
 [amqp]
 bind = 0.0.0.0
 heartbeat = 300
-;unix_path = /run/lavinmq/amqp.sock
-;unix_proxy_protocol = 1
 	`
 
 	clusteringConfig = `
