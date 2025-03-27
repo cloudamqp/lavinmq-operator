@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+	"fmt"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -59,6 +60,30 @@ var _ = Describe("LavinMQ Controller", func() {
 			Scheme: k8sClient.Scheme(),
 		}
 	})
+
+	AfterEach(func() {
+		// Clean up StatefulSet
+		sts := &appsv1.StatefulSet{}
+		err := k8sClient.Get(ctx, typeNamespacedName, sts)
+		if err == nil {
+			Expect(k8sClient.Delete(ctx, sts)).To(Succeed())
+		}
+
+		// Clean up ConfigMap
+		configMap := &corev1.ConfigMap{}
+		err = k8sClient.Get(ctx, types.NamespacedName{Name: fmt.Sprintf("%s-config", resourceName), Namespace: "default"}, configMap)
+		if err == nil {
+			Expect(k8sClient.Delete(ctx, configMap)).To(Succeed())
+		}
+
+		// Clean up LavinMQ
+		resource := &cloudamqpcomv1alpha1.LavinMQ{}
+		err = k8sClient.Get(ctx, typeNamespacedName, resource)
+		if err == nil {
+			Expect(k8sClient.Delete(ctx, resource)).To(Succeed())
+		}
+	})
+
 	Context("When a instance of LavinMQ doesn't exist", func() {
 		It("Should not return a error", func() {
 			_, err := reconciler.Reconcile(ctx, reconcile.Request{
@@ -69,16 +94,6 @@ var _ = Describe("LavinMQ Controller", func() {
 	})
 
 	Context("When a instance of LavinMQ exists", func() {
-		AfterEach(func() {
-			// TODO(user): Cleanup logic after each test, like removing the resource instance.
-			resource := &cloudamqpcomv1alpha1.LavinMQ{}
-			err := k8sClient.Get(ctx, typeNamespacedName, resource)
-			Expect(err).NotTo(HaveOccurred())
-
-			By("Cleanup the specific resource instance LavinMQ")
-			Expect(k8sClient.Delete(ctx, resource)).To(Succeed())
-		})
-
 		Context("When creating a default lavinmq resource", func() {
 			BeforeEach(func() {
 				By("creating the custom resource for the Kind LavinMQ")
@@ -160,6 +175,11 @@ var _ = Describe("LavinMQ Controller", func() {
 		Context("When updating the ports of the lavinmq cluster", func() {
 			BeforeEach(func() {
 				Expect(k8sClient.Create(ctx, lavinmq)).To(Succeed())
+				result, err := reconciler.Reconcile(ctx, reconcile.Request{
+					NamespacedName: typeNamespacedName,
+				})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).To(Equal(reconcile.Result{}))
 				lavinmq.Spec.Ports = []corev1.ContainerPort{
 					{ContainerPort: 1337, Name: "amqp", Protocol: "TCP"},
 				}
@@ -185,6 +205,11 @@ var _ = Describe("LavinMQ Controller", func() {
 		Context("When updating the image of the lavinmq cluster", func() {
 			BeforeEach(func() {
 				Expect(k8sClient.Create(ctx, lavinmq)).To(Succeed())
+				result, err := reconciler.Reconcile(ctx, reconcile.Request{
+					NamespacedName: typeNamespacedName,
+				})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).To(Equal(reconcile.Result{}))
 				lavinmq.Spec.Image = "cloudamqp/lavinmq:2.3.0"
 				Expect(k8sClient.Update(ctx, lavinmq)).To(Succeed())
 			})

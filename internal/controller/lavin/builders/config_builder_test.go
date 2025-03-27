@@ -37,8 +37,10 @@ var _ = Describe("ConfigBuilder", func() {
 
 	BeforeEach(func() {
 		builder = ServiceConfigBuilder{
-			Instance: instance,
-			Scheme:   scheme.Scheme,
+			ResourceBuilder: &ResourceBuilder{
+				Instance: instance,
+				Scheme:   scheme.Scheme,
+			},
 		}
 	})
 	Context("When building a default ConfigMap", func() {
@@ -61,7 +63,8 @@ var _ = Describe("ConfigBuilder", func() {
 			advertised_uri = tcp://test-resource:5679
 	`
 		It("Should return a default ConfigMap", func() {
-			configMap, err := builder.Build()
+			obj, err := builder.Build()
+			configMap := obj.(*corev1.ConfigMap)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(configMap.Name).To(Equal("test-resource-config"))
 			verifyConfigMapEquality(configMap, expectedConfig)
@@ -114,7 +117,8 @@ var _ = Describe("ConfigBuilder", func() {
 		`
 
 		It("Should setup ports in according section", func() {
-			configMap, err := builder.Build()
+			obj, err := builder.Build()
+			configMap := obj.(*corev1.ConfigMap)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(configMap.Name).To(Equal("test-resource-config"))
 			verifyConfigMapEquality(configMap, expectedConfig)

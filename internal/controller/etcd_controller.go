@@ -166,7 +166,7 @@ func (r *EtcdReconciler) createStatefulSet(ctx context.Context, instance *clouda
 							VolumeMounts: []corev1.VolumeMount{
 								{
 									Name:      volumeName,
-									MountPath: "/data",
+									MountPath: "/var/lib/etcd",
 								},
 							},
 							Env: []corev1.EnvVar{
@@ -192,7 +192,15 @@ func (r *EtcdReconciler) createStatefulSet(ctx context.Context, instance *clouda
 								},
 								{
 									Name:  "ETCD_INITIAL_CLUSTER",
-									Value: "default=http://etcd-sample:2380",
+									Value: "etcd-sample=http://etcd-sample:2380",
+								},
+								{
+									Name:  "ETCD_DATA_DIR",
+									Value: "/var/lib/etcd",
+								},
+								{
+									Name:  "ETCD_NAME",
+									Value: instance.Name,
 								},
 							},
 						},

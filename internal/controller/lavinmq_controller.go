@@ -19,8 +19,6 @@ package controller
 import (
 	"context"
 	"fmt"
-	"reflect"
-	"strings"
 
 	cloudamqpcomv1alpha1 "lavinmq-operator/api/v1alpha1"
 
@@ -29,8 +27,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/meta"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
@@ -86,106 +82,71 @@ func (r *LavinMQReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	}
 
 	logger.Info("LavinMQ found", "name", instance.Name)
+	resourceBuilder := builder.ResourceBuilder{
+		Instance: instance,
+		Scheme:   r.Scheme,
+		Context:  ctx,
+	}
 
-	sts := &appsv1.StatefulSet{}
-	err = r.Get(ctx, types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, sts)
-	if err != nil {
-		if apierrors.IsNotFound(err) {
-			logger.Info("StatefulSet not found, creating")
-			sts, err = r.createStatefulSet(ctx, instance)
-			if err != nil {
-				logger.Error(err, "Failed to create StatefulSet for LavinMQ")
+	builders := resourceBuilder.Builders()
 
-				meta.SetStatusCondition(&instance.Status.Conditions, metav1.Condition{
-					Type:    typeAvailableLavinMQ, // TODO: Is this correct?
-					Status:  metav1.ConditionFalse,
-					Reason:  "Reconciling",
-					Message: fmt.Sprintf("Failed to create StatefulSet for LavinMQ: %s : %s", instance.Name, err),
-				})
+	for _, builder := range builders {
+		oldObj := builder.NewObject()
+		newObj, err := builder.Build()
+		if err != nil {
+			logger.Error(err, "Failed to build resource", "name", builder.Name())
+			return ctrl.Result{}, err
+		}
 
-				if err := r.Status().Update(ctx, instance); err != nil {
-					logger.Error(err, "Failed to update LavinMQ status")
+		err = r.Get(ctx, types.NamespacedName{Name: oldObj.GetName(), Namespace: oldObj.GetNamespace()}, oldObj)
+		if err != nil {
+			if apierrors.IsNotFound(err) {
+				logger.Info("Resource not found, creating", "name", builder.Name())
+				if err := r.Create(ctx, newObj); err != nil {
+					logger.Error(err, "Failed to create resource", "name", builder.Name())
 					return ctrl.Result{}, err
 				}
 
-				return ctrl.Result{}, err
-			}
-
-			logger.Info("Creating StatefulSet for LavinMQ", "name", sts.Name)
-
-			if err := r.Create(ctx, sts); err != nil {
-				logger.Error(err, "Failed to create StatefulSet for LavinMQ",
-					"Deployment.Namespace", sts.Namespace,
-					"Deployment.Name", sts.Name)
-				return ctrl.Result{}, err
-			}
-
-			logger.Info("Created StatefulSet for LavinMQ", "name", sts.Name)
-
-			builder := builder.ServiceConfigBuilder{
-				Instance: instance,
-				Scheme:   r.Scheme,
-			}
-
-			configMap, err := builder.Build()
-			if err != nil {
-				logger.Error(err, "Failed to create ConfigMap for LavinMQ")
-				return ctrl.Result{}, err
-			}
-
-			if err := r.Create(ctx, configMap); err != nil {
-				logger.Error(err, "Failed to create ConfigMap for LavinMQ")
+				// Set owner reference
+				if err := ctrl.SetControllerReference(instance, newObj, r.Scheme); err != nil {
+					logger.Error(err, "Failed to set controller reference", "name", builder.Name())
+					return ctrl.Result{}, err
+				}
+				continue
+			} else {
+				logger.Error(err, "Failed to get resource", "name", builder.Name())
 				return ctrl.Result{}, err
 			}
 		}
-	}
 
-	for index, container := range sts.Spec.Template.Spec.Containers {
-		if container.Name == "lavinmq" {
-			if reflect.DeepEqual(instance.Spec.Ports, container.Ports) {
-				logger.Info("Ports are the same, skipping")
-				break
-			}
-			sts.Spec.Template.Spec.Containers[index].Ports = instance.Spec.Ports
-			logger.Info("Ports are different, updating")
-			builder := builder.ServiceConfigBuilder{
-				Instance: instance,
-				Scheme:   r.Scheme,
-			}
+		diff, isDiff, err := builder.Diff(oldObj, newObj)
+		if err != nil {
+			logger.Error(err, "Failed to diff resource", "name", builder.Name())
+			return ctrl.Result{}, err
+		}
 
-			configMap, err := builder.Build()
-			if err != nil {
-				logger.Error(err, "Failed to create ConfigMap for LavinMQ")
+		if isDiff {
+			logger.Info("Resource has changed, updating")
+
+			if err := r.Update(ctx, diff); err != nil {
+				logger.Error(err, "Failed to update resource", "name", builder.Name())
 				return ctrl.Result{}, err
 			}
-
-			if err := r.Update(ctx, configMap); err != nil {
-				logger.Error(err, "Failed to update ConfigMap for LavinMQ")
-				return ctrl.Result{}, err
-			}
-			logger.Info("Updated ConfigMap for LavinMQ", "name", configMap.Name)
+		} else {
+			logger.Info("Resource has not changed, skipping", "name", builder.Name())
 		}
+
+		// TODO: Figure out how this works and when to do it?
+		// meta.SetStatusCondition(&instance.Status.Conditions, metav1.Condition{
+		// 	Type:    typeAvailableLavinMQ, // TODO: Is this correct?
+		// 	Status:  metav1.ConditionFalse,
+		// 	Reason:  "Reconciling",
+		// 	Message: fmt.Sprintf("Failed to create StatefulSet for LavinMQ: %s : %s", instance.Name, err),
+		// })
+
 	}
 
-	for index, container := range sts.Spec.Template.Spec.Containers {
-		if container.Name == "lavinmq" {
-			if reflect.DeepEqual(instance.Spec.Image, container.Image) {
-				logger.Info("Image is the same, skipping")
-				break
-			}
-
-			sts.Spec.Template.Spec.Containers[index].Image = instance.Spec.Image
-			logger.Info("Image is different, updating")
-		}
-	}
-
-	logger.Info("Reapplying stuff")
-	if err := r.Update(ctx, sts); err != nil {
-		logger.Error(err, "Failed to update StatefulSet for LavinMQ")
-		return ctrl.Result{}, err
-	}
-
-	logger.Info("Updated StatefulSet for LavinMQ after port change", "name", sts.Name)
+	logger.Info("Updated resources for LavinMQ")
 
 	return ctrl.Result{}, nil
 }
@@ -199,133 +160,4 @@ func (r *LavinMQReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		// May need deployment idk
 		//Owns(&appsv1.Deployment{}).
 		Complete(r)
-}
-
-func (r *LavinMQReconciler) createStatefulSet(ctx context.Context, instance *cloudamqpcomv1alpha1.LavinMQ) (*appsv1.StatefulSet, error) {
-	labels := labelsForLavinMQ(instance)
-	replicas := instance.Spec.Replicas
-	ports := instance.Spec.Ports
-	volume := instance.Spec.DataVolumeClaimSpec
-	volumeName := instance.Name + "-data"
-	configVolumeName := fmt.Sprintf("%s-config", instance.Name)
-
-	secretVolume, secretVolumeMount := r.referenceSecret(instance)
-
-	image := instance.Spec.Image
-	statefulset := &appsv1.StatefulSet{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      instance.Name,
-			Namespace: instance.Namespace,
-		},
-		Spec: appsv1.StatefulSetSpec{
-			ServiceName: instance.Name,
-			Replicas:    &replicas,
-			Selector: &metav1.LabelSelector{
-				MatchLabels: labels,
-			},
-			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: labels,
-				},
-				Spec: corev1.PodSpec{
-					Containers: []corev1.Container{
-						{
-							Name:  "lavinmq",
-							Image: image,
-							Ports: ports,
-							VolumeMounts: []corev1.VolumeMount{
-								{
-									Name:      volumeName,
-									MountPath: "/var/lib/lavinmq",
-								},
-								{
-									Name:      configVolumeName,
-									MountPath: "/etc/lavinmq",
-									ReadOnly:  true,
-								},
-							},
-						},
-					},
-					Volumes: []corev1.Volume{
-						{
-							Name: configVolumeName,
-							VolumeSource: corev1.VolumeSource{
-								ConfigMap: &corev1.ConfigMapVolumeSource{
-									LocalObjectReference: corev1.LocalObjectReference{Name: configVolumeName},
-								},
-							},
-						},
-					},
-				},
-			},
-			VolumeClaimTemplates: []corev1.PersistentVolumeClaim{
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: volumeName,
-					},
-					Spec: volume,
-				},
-			},
-		},
-	}
-
-	// Add secret volume and mount if they exist
-	if secretVolume != nil && secretVolumeMount != nil {
-		statefulset.Spec.Template.Spec.Containers[0].VolumeMounts = append(
-			statefulset.Spec.Template.Spec.Containers[0].VolumeMounts,
-			*secretVolumeMount,
-		)
-		statefulset.Spec.Template.Spec.Volumes = append(
-			statefulset.Spec.Template.Spec.Volumes,
-			*secretVolume,
-		)
-	}
-
-	// Setting owner reference
-	if err := ctrl.SetControllerReference(instance, statefulset, r.Scheme); err != nil {
-		return nil, err
-	}
-
-	return statefulset, nil
-}
-
-func (r *LavinMQReconciler) referenceSecret(instance *cloudamqpcomv1alpha1.LavinMQ) (*corev1.Volume, *corev1.VolumeMount) {
-	if instance.Spec.Secrets == nil {
-		return nil, nil
-	}
-
-	volume := &corev1.Volume{
-		Name: "tls",
-		VolumeSource: corev1.VolumeSource{
-			Secret: &corev1.SecretVolumeSource{
-				SecretName: instance.Spec.Secrets[0].Name,
-			},
-		},
-	}
-
-	volumeMount := &corev1.VolumeMount{
-		Name:      "tls",
-		MountPath: "/etc/lavinmq/tls",
-		ReadOnly:  true,
-	}
-
-	return volume, volumeMount
-}
-
-func labelsForLavinMQ(instance *cloudamqpcomv1alpha1.LavinMQ) map[string]string {
-	image := instance.Spec.Image
-	version := strings.Split(image, ":")[1]
-
-	labels := map[string]string{
-		"app.kubernetes.io/name":       "lavinmq-operator",
-		"app.kubernetes.io/managed-by": "LavinMQController",
-		"app.kubernetes.io/version":    version,
-	}
-
-	// Append instance labels
-	for k, v := range instance.Labels {
-		labels[k] = v
-	}
-
-	return labels
 }

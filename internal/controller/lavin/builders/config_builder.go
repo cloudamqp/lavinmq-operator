@@ -2,20 +2,17 @@ package builder
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
-
-	cloudamqpcomv1alpha1 "lavinmq-operator/api/v1alpha1"
 
 	ini "gopkg.in/ini.v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type ServiceConfigBuilder struct {
-	Instance *cloudamqpcomv1alpha1.LavinMQ
-	Scheme   *runtime.Scheme
+	*ResourceBuilder
 }
 
 var (
@@ -40,15 +37,24 @@ port = 5679
 `
 )
 
-// BuildConfigMap creates a ConfigMap for LavinMQ configuration
-func (b *ServiceConfigBuilder) Build() (*corev1.ConfigMap, error) {
+func (builder *ResourceBuilder) ConfigBuilder() *ServiceConfigBuilder {
+	return &ServiceConfigBuilder{
+		ResourceBuilder: builder,
+	}
+}
+
+func (b *ServiceConfigBuilder) Name() string {
+	return "config"
+}
+
+func (b *ServiceConfigBuilder) NewObject() client.Object {
 	labels := map[string]string{
 		"app.kubernetes.io/name":       "lavinmq",
 		"app.kubernetes.io/managed-by": "lavinmq-operator",
 		"app.kubernetes.io/instance":   b.Instance.Name,
 	}
 
-	configMap := &corev1.ConfigMap{
+	return &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("%s-config", b.Instance.Name),
 			Namespace: b.Instance.Namespace,
@@ -56,6 +62,12 @@ func (b *ServiceConfigBuilder) Build() (*corev1.ConfigMap, error) {
 		},
 		Data: map[string]string{},
 	}
+}
+
+// BuildConfigMap creates a ConfigMap for LavinMQ configuration
+func (b *ServiceConfigBuilder) Build() (client.Object, error) {
+
+	configMap := b.NewObject().(*corev1.ConfigMap)
 
 	defaultConfig, err := ini.Load([]byte(defaultConfig))
 	if err != nil {
@@ -108,10 +120,16 @@ func (b *ServiceConfigBuilder) Build() (*corev1.ConfigMap, error) {
 
 	configMap.Data["lavinmq.ini"] = config.String()
 
-	// Set owner reference
-	if err := ctrl.SetControllerReference(b.Instance, configMap, b.Scheme); err != nil {
-		return nil, fmt.Errorf("failed to set controller reference: %w", err)
+	return configMap, nil
+}
+
+func (b *ServiceConfigBuilder) Diff(old, new client.Object) (client.Object, bool, error) {
+	oldConfigMap := old.(*corev1.ConfigMap)
+	newConfigMap := new.(*corev1.ConfigMap)
+
+	if !reflect.DeepEqual(oldConfigMap.Data["lavinmq.ini"], newConfigMap.Data["lavinmq.ini"]) {
+		return newConfigMap, true, nil
 	}
 
-	return configMap, nil
+	return newConfigMap, false, nil
 }
