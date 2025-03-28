@@ -2,6 +2,7 @@ package builder
 
 import (
 	"fmt"
+	"lavinmq-operator/internal/controller/utils"
 	"reflect"
 
 	corev1 "k8s.io/api/core/v1"
@@ -25,16 +26,11 @@ func (b *HeadlessServiceBuilder) Name() string {
 }
 
 func (b *HeadlessServiceBuilder) NewObject() client.Object {
-	labels := map[string]string{
-		"app.kubernetes.io/name":       "lavinmq-operator",
-		"app.kubernetes.io/managed-by": "LavinMQController",
-		"app.kubernetes.io/instance":   b.Instance.Name,
-	}
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("%s-service", b.Instance.Name),
 			Namespace: b.Instance.Namespace,
-			Labels:    labels,
+			Labels:    utils.LabelsForLavinMQ(b.Instance),
 		},
 	}
 }
@@ -72,8 +68,12 @@ func (b *HeadlessServiceBuilder) Build() (client.Object, error) {
 func (b *HeadlessServiceBuilder) Diff(oldObj, newObj client.Object) (client.Object, bool, error) {
 	oldService := oldObj.(*corev1.Service)
 	newService := newObj.(*corev1.Service)
-	if reflect.DeepEqual(oldService.Spec.Ports, newService.Spec.Ports) {
-		return nil, false, nil
+	changed := false
+
+	if !reflect.DeepEqual(oldService.Spec.Ports, newService.Spec.Ports) {
+		oldService.Spec.Ports = newService.Spec.Ports
+		changed = true
 	}
-	return newService, true, nil
+
+	return oldService, changed, nil
 }
