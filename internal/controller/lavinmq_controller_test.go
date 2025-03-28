@@ -22,6 +22,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -52,6 +53,16 @@ var _ = Describe("LavinMQ Controller", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      resourceName,
 				Namespace: "default",
+			},
+			Spec: cloudamqpcomv1alpha1.LavinMQSpec{
+				DataVolumeClaimSpec: corev1.PersistentVolumeClaimSpec{
+					AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
+					Resources: corev1.VolumeResourceRequirements{
+						Requests: corev1.ResourceList{
+							corev1.ResourceStorage: resource.MustParse("1Gi"),
+						},
+					},
+				},
 			},
 		}
 
