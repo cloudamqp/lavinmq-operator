@@ -126,7 +126,7 @@ func (r *LavinMQReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		}
 
 		if isDiff {
-			logger.Info("Resource has changed, updating")
+			logger.Info("Resource has changed, updating", "name", builder.Name())
 
 			if err := r.Update(ctx, diff); err != nil {
 				logger.Error(err, "Failed to update resource", "name", builder.Name())
@@ -157,6 +157,7 @@ func (r *LavinMQReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&cloudamqpcomv1alpha1.LavinMQ{}).
 		Owns(&appsv1.StatefulSet{}).
 		Owns(&corev1.ConfigMap{}).
+		Owns(&corev1.Service{}).
 		// May need deployment idk
 		//Owns(&appsv1.Deployment{}).
 		Complete(r)

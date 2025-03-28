@@ -25,6 +25,7 @@ type Builder interface {
 func (builder *ResourceBuilder) Builders() []Builder {
 	return []Builder{
 		builder.ConfigBuilder(),
+		builder.HeadlessServiceBuilder(),
 		builder.StatefulSetBuilder(),
 	}
 }
