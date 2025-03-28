@@ -85,7 +85,7 @@ func (r *LavinMQReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	resourceBuilder := builder.ResourceBuilder{
 		Instance: instance,
 		Scheme:   r.Scheme,
-		Context:  ctx,
+		Logger:   logger,
 	}
 
 	builders := resourceBuilder.Builders()
@@ -158,7 +158,6 @@ func (r *LavinMQReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&appsv1.StatefulSet{}).
 		Owns(&corev1.ConfigMap{}).
 		Owns(&corev1.Service{}).
-		// May need deployment idk
-		//Owns(&appsv1.Deployment{}).
+		Owns(&corev1.PersistentVolumeClaim{}).
 		Complete(r)
 }

@@ -10,7 +10,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 type StatefulSetBuilder struct {
@@ -49,9 +48,6 @@ func (b *StatefulSetBuilder) Build() (client.Object, error) {
 
 func (b *StatefulSetBuilder) baseStatefulSet() *appsv1.StatefulSet {
 	statefulset := b.NewObject().(*appsv1.StatefulSet)
-
-	volume := b.Instance.Spec.DataVolumeClaimSpec
-	volumeName := fmt.Sprintf("%s-data", b.Instance.Name)
 	configVolumeName := fmt.Sprintf("%s-config", b.Instance.Name)
 
 	statefulset.Spec = appsv1.StatefulSetSpec{
@@ -72,7 +68,7 @@ func (b *StatefulSetBuilder) baseStatefulSet() *appsv1.StatefulSet {
 						Ports: b.Instance.Spec.Ports,
 						VolumeMounts: []corev1.VolumeMount{
 							{
-								Name:      volumeName,
+								Name:      "data",
 								MountPath: "/var/lib/lavinmq",
 							},
 							{
@@ -85,6 +81,14 @@ func (b *StatefulSetBuilder) baseStatefulSet() *appsv1.StatefulSet {
 				},
 				Volumes: []corev1.Volume{
 					{
+						Name: "data",
+						VolumeSource: corev1.VolumeSource{
+							PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+								ClaimName: b.Instance.Name,
+							},
+						},
+					},
+					{
 						Name: configVolumeName,
 						VolumeSource: corev1.VolumeSource{
 							ConfigMap: &corev1.ConfigMapVolumeSource{
@@ -93,14 +97,6 @@ func (b *StatefulSetBuilder) baseStatefulSet() *appsv1.StatefulSet {
 						},
 					},
 				},
-			},
-		},
-		VolumeClaimTemplates: []corev1.PersistentVolumeClaim{
-			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: volumeName,
-				},
-				Spec: volume,
 			},
 		},
 	}
@@ -135,7 +131,7 @@ func (b *StatefulSetBuilder) appendTlsConfig(statefulset *appsv1.StatefulSet) {
 }
 
 func (b *StatefulSetBuilder) Diff(old, new client.Object) (client.Object, bool, error) {
-	logger := log.FromContext(b.Context)
+	logger := b.Logger
 	oldSts := old.(*appsv1.StatefulSet)
 	newSts := new.(*appsv1.StatefulSet)
 	changed := false
@@ -154,11 +150,7 @@ func (b *StatefulSetBuilder) Diff(old, new client.Object) (client.Object, bool, 
 		changed = true
 	}
 
-	if oldSts.Spec.VolumeClaimTemplates[0].Spec.Resources.Requests.Storage().Cmp(*newSts.Spec.VolumeClaimTemplates[0].Spec.Resources.Requests.Storage()) != 0 {
-		logger.Info("VolumeClaimTemplates changed, updating")
-		oldSts.Spec.VolumeClaimTemplates = newSts.Spec.VolumeClaimTemplates
-		changed = true
-	}
+	// TODO: Do we need to do a disk check here now that we have a PVC?
 
 	return oldSts, changed, nil
 }

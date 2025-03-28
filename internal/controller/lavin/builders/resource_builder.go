@@ -1,10 +1,9 @@
 package builder
 
 import (
-	"context"
-
 	cloudamqpcomv1alpha1 "lavinmq-operator/api/v1alpha1"
 
+	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -12,7 +11,7 @@ import (
 type ResourceBuilder struct {
 	Instance *cloudamqpcomv1alpha1.LavinMQ
 	Scheme   *runtime.Scheme
-	Context  context.Context
+	Logger   logr.Logger
 }
 
 type Builder interface {
@@ -26,6 +25,7 @@ func (builder *ResourceBuilder) Builders() []Builder {
 	return []Builder{
 		builder.ConfigBuilder(),
 		builder.HeadlessServiceBuilder(),
+		builder.PVCBuilder(),
 		builder.StatefulSetBuilder(),
 	}
 }
