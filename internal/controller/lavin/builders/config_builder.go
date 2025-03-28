@@ -126,10 +126,11 @@ func (b *ServiceConfigBuilder) Build() (client.Object, error) {
 func (b *ServiceConfigBuilder) Diff(old, new client.Object) (client.Object, bool, error) {
 	oldConfigMap := old.(*corev1.ConfigMap)
 	newConfigMap := new.(*corev1.ConfigMap)
-
+	changed := false
 	if !reflect.DeepEqual(oldConfigMap.Data["lavinmq.ini"], newConfigMap.Data["lavinmq.ini"]) {
-		return newConfigMap, true, nil
+		oldConfigMap.Data["lavinmq.ini"] = newConfigMap.Data["lavinmq.ini"]
+		changed = true
 	}
 
-	return newConfigMap, false, nil
+	return oldConfigMap, changed, nil
 }
