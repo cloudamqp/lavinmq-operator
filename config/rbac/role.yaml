@@ -7,7 +7,6 @@ rules:
 - apiGroups:
   - cloudamqp.com.cloudamqp.com
   resources:
-  - etcds
   - lavinmqs
   verbs:
   - create
@@ -20,14 +19,12 @@ rules:
 - apiGroups:
   - cloudamqp.com.cloudamqp.com
   resources:
-  - etcds/finalizers
   - lavinmqs/finalizers
   verbs:
   - update
 - apiGroups:
   - cloudamqp.com.cloudamqp.com
   resources:
-  - etcds/status
   - lavinmqs/status
   verbs:
   - get
