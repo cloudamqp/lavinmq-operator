@@ -1,0 +1,7 @@
+apiVersion: operator.etcd.io/v1alpha1
+kind: EtcdCluster
+metadata:
+  name: etcd-cluster
+spec:
+  version: v3.5.16
+  size: 3
