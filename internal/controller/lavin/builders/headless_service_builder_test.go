@@ -7,6 +7,7 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes/scheme"
 )
 
@@ -142,4 +143,66 @@ var _ = Describe("HeadlessServiceBuilder", func() {
 		})
 	})
 
+	Context("When diffing headless services", func() {
+		var (
+			oldService *corev1.Service
+			newService *corev1.Service
+		)
+
+		BeforeEach(func() {
+			oldService = &corev1.Service{
+				Spec: corev1.ServiceSpec{
+					Ports: []corev1.ServicePort{
+						{
+							Name:       "amqp",
+							Port:       5672,
+							TargetPort: intstr.FromInt(5672),
+							Protocol:   "TCP",
+						},
+					},
+				},
+			}
+			newService = &corev1.Service{
+				Spec: corev1.ServiceSpec{
+					Ports: []corev1.ServicePort{
+						{
+							Name:       "amqp",
+							Port:       5672,
+							TargetPort: intstr.FromInt(5672),
+							Protocol:   "TCP",
+						},
+					},
+				},
+			}
+		})
+
+		It("should return no diff when ports are identical", func() {
+			result, diff, err := builder.Diff(oldService, newService)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(diff).To(BeFalse())
+			Expect(result).To(Equal(oldService))
+		})
+
+		It("should return a diff when ports change", func() {
+			newService.Spec.Ports = []corev1.ServicePort{
+				{
+					Name:       "amqp",
+					Port:       5672,
+					TargetPort: intstr.FromInt(5672),
+					Protocol:   "TCP",
+				},
+				{
+					Name:       "http",
+					Port:       15672,
+					TargetPort: intstr.FromInt(15672),
+					Protocol:   "TCP",
+				},
+			}
+
+			result, diff, err := builder.Diff(oldService, newService)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(diff).To(BeTrue())
+			Expect(result).To(Equal(newService))
+		})
+	})
 })

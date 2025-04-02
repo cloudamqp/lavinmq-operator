@@ -123,5 +123,90 @@ var _ = Describe("ConfigBuilder", func() {
 			Expect(configMap.Name).To(Equal("test-resource-config"))
 			verifyConfigMapEquality(configMap, expectedConfig)
 		})
+
+	})
+
+	Context("When diffing config maps", func() {
+		var (
+			oldConfigMap *corev1.ConfigMap
+			newConfigMap *corev1.ConfigMap
+		)
+
+		BeforeEach(func() {
+			oldConfigMap = &corev1.ConfigMap{
+				Data: map[string]string{
+					"lavinmq.ini": `
+[main]
+log_level = info
+data_dir = /var/lib/lavinmq
+
+[mgmt]
+bind = 0.0.0.0
+
+[amqp]
+bind = 0.0.0.0
+heartbeat = 300
+
+[clustering]
+enabled = true
+bind = 0.0.0.0
+port = 5679
+advertised_uri = tcp://test-resource:5679`,
+				},
+			}
+			newConfigMap = &corev1.ConfigMap{
+				Data: map[string]string{
+					"lavinmq.ini": `
+[main]
+log_level = info
+data_dir = /var/lib/lavinmq
+
+[mgmt]
+bind = 0.0.0.0
+
+[amqp]
+bind = 0.0.0.0
+heartbeat = 300
+
+[clustering]
+enabled = true
+bind = 0.0.0.0
+port = 5679
+advertised_uri = tcp://test-resource:5679`,
+				},
+			}
+		})
+
+		It("should return no diff when configs are identical", func() {
+			result, diff, err := builder.Diff(oldConfigMap, newConfigMap)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(diff).To(BeFalse())
+			Expect(result).To(Equal(oldConfigMap))
+		})
+
+		It("should return a diff when config content changes", func() {
+			newConfigMap.Data["lavinmq.ini"] = `
+[main]
+log_level = debug
+data_dir = /var/lib/lavinmq
+
+[mgmt]
+bind = 0.0.0.0
+
+[amqp]
+bind = 0.0.0.0
+heartbeat = 300
+
+[clustering]
+enabled = true
+bind = 0.0.0.0
+port = 5679
+advertised_uri = tcp://test-resource:5679`
+
+			result, diff, err := builder.Diff(oldConfigMap, newConfigMap)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(diff).To(BeTrue())
+			Expect(result.(*corev1.ConfigMap).Data["lavinmq.ini"]).To(Equal(newConfigMap.Data["lavinmq.ini"]))
+		})
 	})
 })
