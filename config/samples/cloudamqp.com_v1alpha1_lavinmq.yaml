@@ -7,6 +7,7 @@ metadata:
     app: lavinmq-sample
   name: lavinmq-sample
 spec:
+  image: cloudamqp/lavinmq:2.2.0
   replicas: 1
   ports:
     - containerPort: 15672
@@ -30,24 +31,3 @@ spec:
       requests:
         storage: 500Mi
 
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: lavinmq-sample
-  labels:
-    app.kubernetes.io/name: operator-sdk
-    app.kubernetes.io/managed-by: kustomize
-spec:
-  ports:
-    - port: 15672
-      name: http
-    - port: 5672
-      name: amqp
-    - port: 15671
-      name: https
-    - port: 5671
-      name: amqps
-  type: NodePort
-  selector:
-    app: lavinmq-sample

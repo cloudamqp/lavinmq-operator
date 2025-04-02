@@ -67,9 +67,11 @@ func (b *StatefulSetBuilder) baseStatefulSet() *appsv1.StatefulSet {
 			Spec: corev1.PodSpec{
 				Containers: []corev1.Container{
 					{
-						Name:  "lavinmq",
-						Image: b.Instance.Spec.Image,
-						Ports: b.Instance.Spec.Ports,
+						Name:    "lavinmq",
+						Image:   b.Instance.Spec.Image,
+						Command: []string{"/usr/bin/lavinmq"},
+						Args:    b.cliArgs(),
+						Ports:   b.Instance.Spec.Ports,
 						VolumeMounts: []corev1.VolumeMount{
 							{
 								Name:      volumeName,
@@ -79,6 +81,24 @@ func (b *StatefulSetBuilder) baseStatefulSet() *appsv1.StatefulSet {
 								Name:      configVolumeName,
 								MountPath: "/etc/lavinmq",
 								ReadOnly:  true,
+							},
+						},
+						Env: []corev1.EnvVar{
+							{
+								Name: "POD_NAME",
+								ValueFrom: &corev1.EnvVarSource{
+									FieldRef: &corev1.ObjectFieldSelector{
+										FieldPath: "metadata.name",
+									},
+								},
+							},
+							{
+								Name: "POD_NAMESPACE",
+								ValueFrom: &corev1.EnvVarSource{
+									FieldRef: &corev1.ObjectFieldSelector{
+										FieldPath: "metadata.namespace",
+									},
+								},
 							},
 						},
 					},
@@ -106,6 +126,23 @@ func (b *StatefulSetBuilder) baseStatefulSet() *appsv1.StatefulSet {
 	}
 
 	return statefulset
+}
+
+func (b *StatefulSetBuilder) cliArgs() []string {
+	defaultArgs := []string{
+		"--bind=0.0.0.0",
+		"--guest-only-loopback=false",
+	}
+
+	if b.Instance.Spec.Replicas > 0 {
+		// Clustering config is currently spread between CLI here and in the config file.
+		clusteringArgs := []string{
+			fmt.Sprintf("--clustering-advertised-uri=tcp://$(POD_NAME).%s-service.$(POD_NAMESPACE).svc.cluster.local:5679", b.Instance.Name),
+		}
+		defaultArgs = append(defaultArgs, clusteringArgs...)
+	}
+
+	return defaultArgs
 }
 
 func (b *StatefulSetBuilder) appendTlsConfig(statefulset *appsv1.StatefulSet) {
@@ -146,6 +183,8 @@ func (b *StatefulSetBuilder) Diff(old, new client.Object) (client.Object, bool, 
 	if *oldSts.Spec.Replicas != *newSts.Spec.Replicas {
 		logger.Info("Replicas changed", "old", oldSts.Spec.Replicas, "new", newSts.Spec.Replicas)
 		// TODO: Add support for scaling.
+		oldSts.Spec.Replicas = newSts.Spec.Replicas
+		changed = true
 	}
 
 	if !reflect.DeepEqual(oldSts.Spec.Template, newSts.Spec.Template) {
