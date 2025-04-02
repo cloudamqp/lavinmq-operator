@@ -20,13 +20,4 @@ resources:
   kind: LavinMQ
   path: lavinmq-operator/api/v1alpha1
   version: v1alpha1
-- api:
-    crdVersion: v1
-    namespaced: true
-  controller: true
-  domain: cloudamqp.com
-  group: cloudamqp.com
-  kind: Etcd
-  path: lavinmq-operator/api/v1alpha1
-  version: v1alpha1
 version: "3"
