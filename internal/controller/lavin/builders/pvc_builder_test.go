@@ -120,10 +120,10 @@ var _ = Describe("PVCBuilder", func() {
 					},
 				}
 
-				_, _, err := builder.Diff(oldPVC, newPVC)
+				_, diff, err := builder.Diff(oldPVC, newPVC)
 
-				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("access modes change not supported"))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(diff).To(BeFalse())
 			})
 		})
 
@@ -185,42 +185,6 @@ var _ = Describe("PVCBuilder", func() {
 					Expect(err).To(HaveOccurred())
 					Expect(err.Error()).To(ContainSubstring("volume size decreased, not supported"))
 				})
-			})
-		})
-
-		Context("when status changes", func() {
-			It("should track the change but not return a diff", func() {
-				oldPVC := &corev1.PersistentVolumeClaim{
-					Spec: corev1.PersistentVolumeClaimSpec{
-						Resources: corev1.VolumeResourceRequirements{
-							Requests: corev1.ResourceList{
-								corev1.ResourceStorage: resource.MustParse("10Gi"),
-							},
-						},
-					},
-					Status: corev1.PersistentVolumeClaimStatus{
-						Phase: corev1.ClaimPending,
-					},
-				}
-				newPVC := &corev1.PersistentVolumeClaim{
-					Spec: corev1.PersistentVolumeClaimSpec{
-						Resources: corev1.VolumeResourceRequirements{
-							Requests: corev1.ResourceList{
-								corev1.ResourceStorage: resource.MustParse("10Gi"),
-							},
-						},
-					},
-					Status: corev1.PersistentVolumeClaimStatus{
-						Phase: corev1.ClaimBound,
-					},
-				}
-
-				result, diff, err := builder.Diff(oldPVC, newPVC)
-
-				Expect(err).NotTo(HaveOccurred())
-				Expect(diff).To(BeFalse())
-				Expect(result).NotTo(BeNil())
-				Expect(result.(*corev1.PersistentVolumeClaim).Status).To(Equal(newPVC.Status))
 			})
 		})
 	})

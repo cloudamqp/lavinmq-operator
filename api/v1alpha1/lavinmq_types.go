@@ -43,6 +43,7 @@ type LavinMQSpec struct {
 	// +optional
 	Ports []corev1.ContainerPort `json:"ports,omitempty"`
 
+	// Will override the accessmode and force it to ReadWriteOnce
 	// +required
 	DataVolumeClaimSpec corev1.PersistentVolumeClaimSpec `json:"dataVolumeClaim"`
 

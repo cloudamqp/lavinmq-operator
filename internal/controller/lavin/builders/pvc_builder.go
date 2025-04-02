@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"lavinmq-operator/internal/controller/utils"
 
-	"reflect"
-
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -39,6 +37,8 @@ func (b *PVCBuilder) Build() (client.Object, error) {
 	pvc := b.NewObject().(*corev1.PersistentVolumeClaim)
 
 	pvc.Spec = b.Instance.Spec.DataVolumeClaimSpec
+	// Forcing ReadWriteOnce for volume access mode
+	pvc.Spec.AccessModes = []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce}
 
 	return pvc, nil
 }
@@ -56,11 +56,6 @@ func (b *PVCBuilder) Diff(old, new client.Object) (client.Object, bool, error) {
 		}
 	}
 
-	// Check if access modes changed
-	if !reflect.DeepEqual(oldPVC.Spec.AccessModes, newPVC.Spec.AccessModes) {
-		return newPVC, false, fmt.Errorf("access modes change not supported")
-	}
-
 	// Handle storage size changes
 	sizeComp := oldPVC.Spec.Resources.Requests.Storage().Cmp(*newPVC.Spec.Resources.Requests.Storage())
 	switch sizeComp {
@@ -73,14 +68,6 @@ func (b *PVCBuilder) Diff(old, new client.Object) (client.Object, bool, error) {
 	case 1:
 		logger.Info("Volume size decreased, not supported")
 		return newPVC, false, fmt.Errorf("volume size decreased, not supported")
-	}
-
-	// Update status if needed
-	if oldPVC.Status.Phase != newPVC.Status.Phase {
-		logger.Info("PVC status changed",
-			"old", oldPVC.Status.Phase,
-			"new", newPVC.Status.Phase)
-		oldPVC.Status = newPVC.Status
 	}
 
 	return oldPVC, diff, nil

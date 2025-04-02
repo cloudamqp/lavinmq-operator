@@ -40,9 +40,7 @@ spec:
             description: LavinMQSpec defines the desired state of LavinMQ
             properties:
               dataVolumeClaim:
-                description: |-
-                  PersistentVolumeClaimSpec describes the common attributes of storage devices
-                  and allows a Source for provider-specific attributes
+                description: Will override the accessmode and force it to ReadWriteOnce
                 properties:
                   accessModes:
                     description: |-
