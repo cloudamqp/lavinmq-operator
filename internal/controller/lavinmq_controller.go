@@ -102,16 +102,16 @@ func (r *LavinMQReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		if err != nil {
 			if apierrors.IsNotFound(err) {
 				logger.Info("Resource not found, creating", "name", builder.Name())
-				if err := r.Create(ctx, newObj); err != nil {
-					logger.Error(err, "Failed to create resource", "name", builder.Name())
-					return ctrl.Result{}, err
-				}
-
 				// Set owner reference
 				if err := ctrl.SetControllerReference(instance, newObj, r.Scheme); err != nil {
 					logger.Error(err, "Failed to set controller reference", "name", builder.Name())
 					return ctrl.Result{}, err
 				}
+				if err := r.Create(ctx, newObj); err != nil {
+					logger.Error(err, "Failed to create resource", "name", builder.Name())
+					return ctrl.Result{}, err
+				}
+
 				continue
 			} else {
 				logger.Error(err, "Failed to get resource", "name", builder.Name())
