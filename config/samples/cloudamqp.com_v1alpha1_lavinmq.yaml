@@ -22,12 +22,14 @@ spec:
     - etcd-cluster-0.etcd-cluster.default.svc.cluster.local:2379
     - etcd-cluster-1.etcd-cluster.default.svc.cluster.local:2379
     - etcd-cluster-2.etcd-cluster.default.svc.cluster.local:2379
-  secrets:
-    - name: lavinmq-tls
+  tlsSecret:
+    name: lavinmq-tls
   dataVolumeClaim:
     accessModes:
       - ReadWriteOnce
     resources:
       requests:
         storage: 2Gi
+  config:
+    consumer_timeout: 20000
 

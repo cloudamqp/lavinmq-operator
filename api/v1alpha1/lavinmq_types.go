@@ -51,7 +51,15 @@ type LavinMQSpec struct {
 	EtcdEndpoints []string `json:"etcdEndpoints,omitempty"`
 
 	// +optional
-	Secrets []corev1.SecretReference `json:"secrets,omitempty"`
+	TlsSecret *corev1.SecretReference `json:"tlsSecret,omitempty"`
+
+	// +optional
+	Config LavinMQConfig `json:"config,omitempty"`
+}
+
+type LavinMQConfig struct {
+	// +optional
+	ConsumerTimeout uint64 `json:"consumer_timeout,omitempty"`
 }
 
 // LavinMQStatus defines the observed state of LavinMQ

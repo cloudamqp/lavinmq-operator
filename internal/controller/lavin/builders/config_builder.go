@@ -98,12 +98,18 @@ func (b *ServiceConfigBuilder) Build() (client.Object, error) {
 		clusterConfig.Section("clustering").Key("etcd_endpoints").SetValue(strings.Join(b.Instance.Spec.EtcdEndpoints, ","))
 	}
 
+	logger := b.Logger
+	logger.Info("Setting consumer timeout", "consumer_timeout", b.Instance.Spec.Config.ConsumerTimeout)
+	if b.Instance.Spec.Config.ConsumerTimeout != 0 {
+		defaultConfig.Section("main").Key("consumer_timeout").SetValue(fmt.Sprintf("%d", b.Instance.Spec.Config.ConsumerTimeout))
+	}
+
 	// TODO: Add advertised uri may be wrong here. Headless service?
 	clusterConfig.Section("clustering").Key("advertised_uri").SetValue(fmt.Sprintf("tcp://%s:5679", b.Instance.Name))
 
 	config := strings.Builder{}
 
-	if b.Instance.Spec.Secrets != nil {
+	if b.Instance.Spec.TlsSecret != nil {
 		defaultConfig.Section("main").Key("tls_cert").SetValue(fmt.Sprintf("/etc/lavinmq/tls/%s", "tls.crt"))
 		defaultConfig.Section("main").Key("tls_key").SetValue(fmt.Sprintf("/etc/lavinmq/tls/%s", "tls.key"))
 	}
