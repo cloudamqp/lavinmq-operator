@@ -3,6 +3,7 @@ package builder
 import (
 	"fmt"
 	"reflect"
+	"slices"
 
 	"lavinmq-operator/internal/controller/utils"
 
@@ -201,38 +202,43 @@ func (b *StatefulSetBuilder) diffTemplate(old, new *corev1.PodSpec) (bool, error
 		return false, fmt.Errorf("container count mismatch, expects 1")
 	}
 
-	for i, container := range old.Containers {
-		if container.Image != new.Containers[i].Image {
-			old.Containers[i].Image = new.Containers[i].Image
-			changed = true
-		}
+	// Pointer the old as that's the object we're mutating
+	oldContainer := &old.Containers[0]
+	newContainer := new.Containers[0]
 
-		// TODO: Expand this to own methods and granular checks
-		if !reflect.DeepEqual(container.Args, new.Containers[i].Args) {
-			old.Containers[i].Args = new.Containers[i].Args
-			changed = true
-		}
-
-		// TODO: Expand this to own methods and granular checks
-		if !reflect.DeepEqual(container.Ports, new.Containers[i].Ports) {
-			old.Containers[i].Ports = new.Containers[i].Ports
-			changed = true
-		}
+	if oldContainer.Image != newContainer.Image {
+		oldContainer.Image = newContainer.Image
+		changed = true
 	}
 
-	for _, volume := range old.Volumes {
-		if volume.Name == "tls" {
-			secretName := volume.VolumeSource.Secret.SecretName
-			// Checks if the secret name is the same as the one in the instance spec
-			if b.Instance.Spec.TlsSecret != nil && b.Instance.Spec.TlsSecret.Name != secretName {
-				changed = true
-			}
+	// TODO: Expand this to own methods and granular checks
+	if !reflect.DeepEqual(oldContainer.Args, newContainer.Args) {
+		oldContainer.Args = newContainer.Args
+		changed = true
+	}
+
+	// TODO: Expand this to own methods and granular checks
+	if !reflect.DeepEqual(oldContainer.Ports, newContainer.Ports) {
+		oldContainer.Ports = newContainer.Ports
+		changed = true
+	}
+
+	index := slices.IndexFunc(old.Volumes, func(v corev1.Volume) bool {
+		return v.Name == "tls"
+	})
+
+	if index != -1 {
+		secretName := old.Volumes[index].VolumeSource.Secret.SecretName
+		// Checks if the secret name is the same as the one in the instance spec
+		if b.Instance.Spec.TlsSecret != nil && b.Instance.Spec.TlsSecret.Name != secretName {
+			changed = true
 		}
 	}
 
 	if len(old.Volumes) != len(new.Volumes) {
 		changed = true
 	}
+
 	old.Volumes = new.Volumes
 
 	if changed {

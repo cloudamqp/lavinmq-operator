@@ -98,8 +98,6 @@ func (b *ServiceConfigBuilder) Build() (client.Object, error) {
 		clusterConfig.Section("clustering").Key("etcd_endpoints").SetValue(strings.Join(b.Instance.Spec.EtcdEndpoints, ","))
 	}
 
-	logger := b.Logger
-	logger.Info("Setting consumer timeout", "consumer_timeout", b.Instance.Spec.Config.ConsumerTimeout)
 	if b.Instance.Spec.Config.ConsumerTimeout != 0 {
 		defaultConfig.Section("main").Key("consumer_timeout").SetValue(fmt.Sprintf("%d", b.Instance.Spec.Config.ConsumerTimeout))
 	}

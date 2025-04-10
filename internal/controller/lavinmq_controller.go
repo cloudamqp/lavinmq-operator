@@ -146,7 +146,7 @@ func (r *LavinMQReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		}
 	}
 
-	// If ConfigBuilder changed or secrets changed, trigger a restart using the annotation trick
+	// If ConfigBuilder changed, trigger a restart using the annotation trick
 	if shouldRestart {
 		logger.Info("Triggering restart with annotation trick")
 		err := r.RestartStatefulSet(ctx, instance)
