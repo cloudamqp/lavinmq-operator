@@ -88,7 +88,7 @@ func (r *LavinMQReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		Logger:   logger,
 	}
 
-	builders := resourceBuilder.Builders()
+	builders := resourceBuilder.Builders(r.Client)
 
 	// Track if a diff requires a restart
 	shouldRestart := false

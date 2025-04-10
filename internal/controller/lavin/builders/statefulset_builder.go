@@ -1,6 +1,7 @@
 package builder
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"slices"
@@ -9,22 +10,47 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-type StatefulSetBuilder struct {
+type StatefulSetReconciler struct {
 	*ResourceBuilder
 }
 
-func (builder *ResourceBuilder) StatefulSetBuilder() *StatefulSetBuilder {
-	return &StatefulSetBuilder{
+func (builder *ResourceBuilder) StatefulSetReconciler() *StatefulSetReconciler {
+	return &StatefulSetReconciler{
 		ResourceBuilder: builder,
 	}
 }
 
-func (b *StatefulSetBuilder) Name() string {
-	return "statefulset"
+func (b *StatefulSetReconciler) Reconcile(ctx context.Context) (ctrl.Result, error) {
+	statefulset := b.newObject()
+
+	err := b.GetItem(ctx, statefulset)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			b.CreateItem(ctx, statefulset)
+			return ctrl.Result{}, nil
+		}
+
+		return ctrl.Result{}, err
+	}
+
+	err = b.updateFields(ctx, statefulset)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	err = b.Client.Update(ctx, statefulset)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	return ctrl.Result{}, nil
 }
 
 func (b *StatefulSetBuilder) NewObject() client.Object {
@@ -103,14 +129,6 @@ func (b *StatefulSetBuilder) baseStatefulSet() *appsv1.StatefulSet {
 				},
 				Volumes: []corev1.Volume{
 					{
-						Name: "data",
-						VolumeSource: corev1.VolumeSource{
-							PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-								ClaimName: b.Instance.Name,
-							},
-						},
-					},
-					{
 						Name: configVolumeName,
 						VolumeSource: corev1.VolumeSource{
 							ConfigMap: &corev1.ConfigMapVolumeSource{
@@ -119,6 +137,14 @@ func (b *StatefulSetBuilder) baseStatefulSet() *appsv1.StatefulSet {
 						},
 					},
 				},
+			},
+		},
+		VolumeClaimTemplates: []corev1.PersistentVolumeClaim{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "data",
+				},
+				Spec: b.Instance.Spec.DataVolumeClaimSpec,
 			},
 		},
 	}
@@ -185,15 +211,41 @@ func (b *StatefulSetBuilder) Diff(old, new client.Object) (client.Object, bool, 
 		changed = true
 	}
 
-	changed, err := b.diffTemplate(&oldSts.Spec.Template.Spec, &newSts.Spec.Template.Spec)
-
-	if err != nil {
+	if diff, err := b.diffTemplate(&oldSts.Spec.Template.Spec, &newSts.Spec.Template.Spec); err != nil {
 		return nil, false, err
+	} else if diff {
+		changed = true
 	}
 
 	// TODO: Do we need to do a disk check here now that we have a PVC?
 
 	return oldSts, changed, nil
+}
+
+func (b *StatefulSetBuilder) diffPersistentVolumeClaim() (bool, error) {
+	changed := false
+	for i := 0; i < int(b.Instance.Spec.Replicas); i++ {
+		pvc := &corev1.PersistentVolumeClaim{}
+		err := b.Client.Get(context.Background(), types.NamespacedName{Name: fmt.Sprintf("data-%s-%d", b.Instance.Name, i), Namespace: b.Instance.Namespace}, pvc)
+		if err != nil {
+			return false, err
+		}
+
+		comp := pvc.Spec.Resources.Requests.Storage().Cmp(*b.Instance.Spec.DataVolumeClaimSpec.Resources.Requests.Storage())
+
+		if comp == -1 {
+			changed = true
+			pvc.Spec.Resources.Requests = b.Instance.Spec.DataVolumeClaimSpec.Resources.Requests
+			err = b.Client.Update(context.Background(), pvc)
+			if err != nil {
+				return false, err
+			}
+
+			b.Logger.Info("PVC size increased", "pvc", pvc.Name)
+		}
+	}
+
+	return changed, nil
 }
 
 func (b *StatefulSetBuilder) diffTemplate(old, new *corev1.PodSpec) (bool, error) {

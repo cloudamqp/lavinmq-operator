@@ -29,7 +29,7 @@ spec:
       - ReadWriteOnce
     resources:
       requests:
-        storage: 2Gi
+        storage: 3Gi
   config:
     consumer_timeout: 20000
 

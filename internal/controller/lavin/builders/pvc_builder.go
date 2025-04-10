@@ -1,74 +1,88 @@
 package builder
 
 import (
+	"context"
 	"fmt"
 	"lavinmq-operator/internal/controller/utils"
 
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	ctrl "sigs.k8s.io/controller-runtime"
 )
 
-type PVCBuilder struct {
+type PVCReconciler struct {
 	*ResourceBuilder
 }
 
-func (builder *ResourceBuilder) PVCBuilder() *PVCBuilder {
-	return &PVCBuilder{
-		ResourceBuilder: builder,
+func (reconciler *ResourceBuilder) PVCReconciler() *PVCReconciler {
+	return &PVCReconciler{
+		ResourceBuilder: reconciler,
 	}
 }
 
-func (b *PVCBuilder) Name() string {
-	return "pvc"
-}
+func (b *PVCReconciler) Reconcile(ctx context.Context) (ctrl.Result, error) {
+	pvcs := b.newObjects()
 
-func (b *PVCBuilder) NewObject() client.Object {
-	return &corev1.PersistentVolumeClaim{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      b.Instance.Name,
-			Namespace: b.Instance.Namespace,
-			Labels:    utils.LabelsForLavinMQ(b.Instance),
-		},
-	}
-}
+	for _, pvc := range pvcs {
+		err := b.GetItem(ctx, &pvc)
+		if err != nil {
+			if apierrors.IsNotFound(err) {
+				b.CreateItem(ctx, &pvc)
+				continue
+			}
 
-func (b *PVCBuilder) Build() (client.Object, error) {
-	pvc := b.NewObject().(*corev1.PersistentVolumeClaim)
+			return ctrl.Result{}, err
+		}
 
-	pvc.Spec = b.Instance.Spec.DataVolumeClaimSpec
-	// Forcing ReadWriteOnce for volume access mode
-	pvc.Spec.AccessModes = []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce}
+		err = b.updateFields(ctx, &pvc)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
 
-	return pvc, nil
-}
-
-func (b *PVCBuilder) Diff(old, new client.Object) (client.Object, bool, error) {
-	logger := b.Logger
-	oldPVC := old.(*corev1.PersistentVolumeClaim)
-	newPVC := new.(*corev1.PersistentVolumeClaim)
-	diff := false
-
-	// Check if storage class changed
-	if oldPVC.Spec.StorageClassName != nil && newPVC.Spec.StorageClassName != nil {
-		if *oldPVC.Spec.StorageClassName != *newPVC.Spec.StorageClassName {
-			return newPVC, false, fmt.Errorf("storage class change not supported")
+		err = b.Client.Update(ctx, &pvc)
+		if err != nil {
+			return ctrl.Result{}, err
 		}
 	}
 
-	// Handle storage size changes
-	sizeComp := oldPVC.Spec.Resources.Requests.Storage().Cmp(*newPVC.Spec.Resources.Requests.Storage())
-	switch sizeComp {
-	case -1:
-		logger.Info("Volume size changed, increasing",
-			"old", oldPVC.Spec.Resources.Requests.Storage(),
-			"new", newPVC.Spec.Resources.Requests.Storage())
-		oldPVC.Spec.Resources.Requests = newPVC.Spec.Resources.Requests
-		diff = true
-	case 1:
-		logger.Info("Volume size decreased, not supported")
-		return newPVC, false, fmt.Errorf("volume size decreased, not supported")
+	return ctrl.Result{}, nil
+}
+
+func (b *PVCReconciler) newObjects() []corev1.PersistentVolumeClaim {
+	pvcs := []corev1.PersistentVolumeClaim{}
+
+	for i := 0; i < int(b.Instance.Spec.Replicas); i++ {
+		pvc := &corev1.PersistentVolumeClaim{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      fmt.Sprintf("data-%s-%d", b.Instance.Name, i),
+				Namespace: b.Instance.Namespace,
+				Labels:    utils.LabelsForLavinMQ(b.Instance),
+			},
+			Spec: b.Instance.Spec.DataVolumeClaimSpec,
+		}
+		// Forcing ReadWriteOnce for volume access mode
+		pvc.Spec.AccessModes = []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce}
+		pvcs = append(pvcs, *pvc)
 	}
 
-	return oldPVC, diff, nil
+	return pvcs
+}
+
+func (b *PVCReconciler) updateFields(ctx context.Context, pvc *corev1.PersistentVolumeClaim) error {
+	sizeComp := pvc.Spec.Resources.Requests.Storage().Cmp(*b.Instance.Spec.DataVolumeClaimSpec.Resources.Requests.Storage())
+
+	switch sizeComp {
+	case -1:
+		b.Logger.Info("Volume size changed, increasing",
+			"old", pvc.Spec.Resources.Requests.Storage(),
+			"new", b.Instance.Spec.DataVolumeClaimSpec.Resources.Requests.Storage())
+		pvc.Spec.Resources.Requests = b.Instance.Spec.DataVolumeClaimSpec.Resources.Requests
+
+	case 1:
+		b.Logger.Info("Volume size decreased, not supported")
+		return fmt.Errorf("volume size decreased, not supported")
+	}
+
+	return nil
 }

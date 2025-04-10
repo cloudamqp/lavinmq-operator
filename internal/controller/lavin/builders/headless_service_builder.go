@@ -1,42 +1,52 @@
 package builder
 
 import (
+	"context"
 	"fmt"
 	"lavinmq-operator/internal/controller/utils"
 	"reflect"
 
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	ctrl "sigs.k8s.io/controller-runtime"
 )
 
-type HeadlessServiceBuilder struct {
+type HeadlessServiceReconciler struct {
 	*ResourceBuilder
 }
 
-func (builder *ResourceBuilder) HeadlessServiceBuilder() *HeadlessServiceBuilder {
-	return &HeadlessServiceBuilder{
+func (builder *ResourceBuilder) HeadlessServiceReconciler() *HeadlessServiceReconciler {
+	return &HeadlessServiceReconciler{
 		ResourceBuilder: builder,
 	}
 }
 
-func (b *HeadlessServiceBuilder) Name() string {
-	return "service"
-}
+func (b *HeadlessServiceReconciler) Reconcile(ctx context.Context) (ctrl.Result, error) {
+	service := b.newObject()
 
-func (b *HeadlessServiceBuilder) NewObject() client.Object {
-	return &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-service", b.Instance.Name),
-			Namespace: b.Instance.Namespace,
-			Labels:    utils.LabelsForLavinMQ(b.Instance),
-		},
+	err := b.GetItem(ctx, service)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			b.CreateItem(ctx, service)
+			return ctrl.Result{}, nil
+		}
+
+		return ctrl.Result{}, err
 	}
+
+	b.updateFields(ctx, service)
+
+	err = b.Client.Update(ctx, service)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	return ctrl.Result{}, nil
 }
 
-func (b *HeadlessServiceBuilder) Build() (client.Object, error) {
-	service := b.NewObject().(*corev1.Service)
+func (b *HeadlessServiceReconciler) newObject() *corev1.Service {
 	servicePorts := []corev1.ServicePort{}
 	if b.Instance.Spec.EtcdEndpoints != nil {
 		servicePorts = append(servicePorts, corev1.ServicePort{
@@ -56,24 +66,26 @@ func (b *HeadlessServiceBuilder) Build() (client.Object, error) {
 		})
 	}
 
-	service.Spec = corev1.ServiceSpec{
-		Selector:  b.Instance.Labels,
-		ClusterIP: "None",
-		Ports:     servicePorts,
+	service := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      fmt.Sprintf("%s-service", b.Instance.Name),
+			Namespace: b.Instance.Namespace,
+			Labels:    utils.LabelsForLavinMQ(b.Instance),
+		},
+		Spec: corev1.ServiceSpec{
+			Selector:  b.Instance.Labels,
+			ClusterIP: "None",
+			Ports:     servicePorts,
+		},
 	}
 
-	return service, nil
+	return service
 }
 
-func (b *HeadlessServiceBuilder) Diff(oldObj, newObj client.Object) (client.Object, bool, error) {
-	oldService := oldObj.(*corev1.Service)
-	newService := newObj.(*corev1.Service)
-	changed := false
+func (b *HeadlessServiceReconciler) updateFields(ctx context.Context, service *corev1.Service) {
+	newService := b.newObject()
 
-	if !reflect.DeepEqual(oldService.Spec.Ports, newService.Spec.Ports) {
-		oldService.Spec.Ports = newService.Spec.Ports
-		changed = true
+	if !reflect.DeepEqual(service.Spec.Ports, newService.Spec.Ports) {
+		service.Spec.Ports = newService.Spec.Ports
 	}
-
-	return oldService, changed, nil
 }
