@@ -84,6 +84,7 @@ func (r *LavinMQReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		Instance: instance,
 		Scheme:   r.Scheme,
 		Logger:   logger,
+		Client:   r.Client,
 	}
 
 	reconcilers := resourceBuilder.Reconcilers()
