@@ -83,7 +83,7 @@ func (b *ConfigReconciler) newObject() (*corev1.ConfigMap, error) {
 
 	configMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-config", b.Instance.Name),
+			Name:      b.Instance.Name,
 			Namespace: b.Instance.Namespace,
 			Labels:    labels,
 		},
@@ -159,4 +159,9 @@ func (b *ConfigReconciler) updateFields(ctx context.Context, configMap *corev1.C
 	}
 
 	return nil
+}
+
+// Name returns the name of the config reconciler
+func (b *ConfigReconciler) Name() string {
+	return "config"
 }

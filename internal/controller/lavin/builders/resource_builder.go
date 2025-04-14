@@ -23,13 +23,14 @@ func (reconciler *ResourceBuilder) Reconcilers() []Reconciler {
 		reconciler.ConfigReconciler(),
 		reconciler.HeadlessServiceReconciler(),
 		reconciler.PVCReconciler(),
-		// reconciler.StatefulSetReconciler(client),
+		reconciler.StatefulSetReconciler(),
 	}
 }
 
 type Reconciler interface {
 	// TODO: Fix config restart context.
 	Reconcile(ctx context.Context) (ctrl.Result, error)
+	Name() string
 }
 
 func (reconciler *ResourceBuilder) GetItem(ctx context.Context, obj client.Object) error {

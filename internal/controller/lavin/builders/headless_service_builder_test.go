@@ -1,208 +1,151 @@
 package builder
 
 import (
+	"context"
 	cloudamqpcomv1alpha1 "lavinmq-operator/api/v1alpha1"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 )
 
-var _ = Describe("HeadlessServiceBuilder", func() {
-
+var _ = Describe("HeadlessServiceReconciler", func() {
+	var namespacedName = types.NamespacedName{
+		Name:      "test-resource",
+		Namespace: "default",
+	}
 	var (
-		objectMeta = metav1.ObjectMeta{
-			Name:      "test-resource",
-			Namespace: "default",
+		instance = &cloudamqpcomv1alpha1.LavinMQ{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      namespacedName.Name,
+				Namespace: namespacedName.Namespace,
+			},
 		}
-		builder HeadlessServiceBuilder
+		reconciler *HeadlessServiceReconciler
 	)
 
-	Context("When building a HSService without port or etcdendpoint spec", func() {
-		BeforeEach(func() {
-			instance := &cloudamqpcomv1alpha1.LavinMQ{
-				ObjectMeta: objectMeta,
-			}
-			builder = HeadlessServiceBuilder{
-				ResourceBuilder: &ResourceBuilder{
-					Instance: instance,
-					Scheme:   scheme.Scheme,
-				},
-			}
-		})
+	BeforeEach(func() {
+		reconciler = &HeadlessServiceReconciler{
+			ResourceBuilder: &ResourceBuilder{
+				Instance: instance,
+				Scheme:   scheme.Scheme,
+				Client:   k8sClient,
+			},
+		}
+	})
 
-		It("Should return a empty service", func() {
-			obj, err := builder.Build()
-			HeadlessService := obj.(*corev1.Service)
+	Context("When building a default Service", func() {
+		It("Should return a headless service with default ports", func() {
+			reconciler.Reconcile(context.Background())
+
+			service := &corev1.Service{}
+			err := k8sClient.Get(context.Background(), namespacedName, service)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(HeadlessService.Name).To(Equal("test-resource-service"))
-			Expect(HeadlessService.Spec.Ports).To(HaveLen(0))
-			Expect(HeadlessService.Spec.ClusterIP).To(Equal("None"))
+			Expect(service.Name).To(Equal(namespacedName.Name))
+			Expect(service.Spec.ClusterIP).To(Equal("None"))
+			Expect(service.Spec.Ports).To(HaveLen(2)) // amqp and http by default
 		})
 	})
 
-	Context("When building a headlessService with port spec and etcd", func() {
+	Context("When providing custom ports", func() {
 		BeforeEach(func() {
-			instance := &cloudamqpcomv1alpha1.LavinMQ{
-				ObjectMeta: objectMeta,
-				Spec: cloudamqpcomv1alpha1.LavinMQSpec{
-					Ports: []corev1.ContainerPort{
-						{
-							Name:          "amqp",
-							ContainerPort: 5672,
-						},
-						{
-							Name:          "http",
-							ContainerPort: 15672,
-						},
-					},
-					EtcdEndpoints: []string{"localhost:2379"},
-				},
-			}
-			builder = HeadlessServiceBuilder{
-				ResourceBuilder: &ResourceBuilder{
-					Instance: instance,
-					Scheme:   scheme.Scheme,
-				},
-			}
-		})
-
-		It("Should return a service for including both clustering and specified ports", func() {
-			obj, err := builder.Build()
-			HeadlessService := obj.(*corev1.Service)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(HeadlessService.Name).To(Equal("test-resource-service"))
-			Expect(HeadlessService.Spec.ClusterIP).To(Equal("None"))
-			Expect(HeadlessService.Spec.Ports).To(HaveLen(3))
-		})
-	})
-
-	Context("When building a headlessService with port spec", func() {
-		BeforeEach(func() {
-			instance := &cloudamqpcomv1alpha1.LavinMQ{
-				ObjectMeta: objectMeta,
-				Spec: cloudamqpcomv1alpha1.LavinMQSpec{
-					Ports: []corev1.ContainerPort{
-						{
-							Name:          "amqp",
-							ContainerPort: 5672,
-						},
-						{
-							Name:          "http",
-							ContainerPort: 15672,
-						},
-					},
-				},
-			}
-			builder = HeadlessServiceBuilder{
-				ResourceBuilder: &ResourceBuilder{
-					Instance: instance,
-					Scheme:   scheme.Scheme,
-				},
-			}
-		})
-
-		It("Should return a service with both ports includes", func() {
-			obj, err := builder.Build()
-			HeadlessService := obj.(*corev1.Service)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(HeadlessService.Name).To(Equal("test-resource-service"))
-			Expect(HeadlessService.Spec.ClusterIP).To(Equal("None"))
-			Expect(HeadlessService.Spec.Ports).To(HaveLen(2))
-		})
-	})
-
-	Context("When building a HeadlessService with etcdendpoint spec", func() {
-		BeforeEach(func() {
-			instance := &cloudamqpcomv1alpha1.LavinMQ{
-				ObjectMeta: objectMeta,
-				Spec: cloudamqpcomv1alpha1.LavinMQSpec{
-					EtcdEndpoints: []string{"localhost:2379"},
-				},
-			}
-			builder = HeadlessServiceBuilder{
-				ResourceBuilder: &ResourceBuilder{
-					Instance: instance,
-					Scheme:   scheme.Scheme,
-				},
-			}
-		})
-
-		It("Should return a service for port 5679", func() {
-			obj, err := builder.Build()
-			HeadlessService := obj.(*corev1.Service)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(HeadlessService.Name).To(Equal("test-resource-service"))
-			Expect(HeadlessService.Spec.ClusterIP).To(Equal("None"))
-			Expect(HeadlessService.Spec.Ports).To(HaveLen(1))
-			Expect(HeadlessService.Spec.Ports[0].Port).To(Equal(int32(5679)))
-			Expect(HeadlessService.Spec.Ports[0].Name).To(Equal("clustering"))
-		})
-	})
-
-	Context("When diffing headless services", func() {
-		var (
-			oldService *corev1.Service
-			newService *corev1.Service
-		)
-
-		BeforeEach(func() {
-			oldService = &corev1.Service{
-				Spec: corev1.ServiceSpec{
-					Ports: []corev1.ServicePort{
-						{
-							Name:       "amqp",
-							Port:       5672,
-							TargetPort: intstr.FromInt(5672),
-							Protocol:   "TCP",
-						},
-					},
-				},
-			}
-			newService = &corev1.Service{
-				Spec: corev1.ServiceSpec{
-					Ports: []corev1.ServicePort{
-						{
-							Name:       "amqp",
-							Port:       5672,
-							TargetPort: intstr.FromInt(5672),
-							Protocol:   "TCP",
-						},
-					},
-				},
-			}
-		})
-
-		It("should return no diff when ports are identical", func() {
-			result, diff, err := builder.Diff(oldService, newService)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(diff).To(BeFalse())
-			Expect(result).To(Equal(oldService))
-		})
-
-		It("should return a diff when ports change", func() {
-			newService.Spec.Ports = []corev1.ServicePort{
+			instance.Spec.Ports = []corev1.ContainerPort{
 				{
-					Name:       "amqp",
-					Port:       5672,
-					TargetPort: intstr.FromInt(5672),
-					Protocol:   "TCP",
+					Name:          "amqp",
+					ContainerPort: 1111,
 				},
 				{
-					Name:       "http",
-					Port:       15672,
-					TargetPort: intstr.FromInt(15672),
-					Protocol:   "TCP",
+					Name:          "http",
+					ContainerPort: 2222,
+				},
+				{
+					Name:          "amqps",
+					ContainerPort: 3333,
+				},
+				{
+					Name:          "https",
+					ContainerPort: 4444,
 				},
 			}
+		})
 
-			result, diff, err := builder.Diff(oldService, newService)
+		It("Should create service with all specified ports", func() {
+			reconciler.Reconcile(context.Background())
+
+			service := &corev1.Service{}
+			err := k8sClient.Get(context.Background(), namespacedName, service)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(diff).To(BeTrue())
-			Expect(result).To(Equal(newService))
+			Expect(service.Spec.Ports).To(HaveLen(4))
+			Expect(service.Spec.Ports[0].Name).To(Equal("amqp"))
+			Expect(service.Spec.Ports[0].Port).To(Equal(int32(1111)))
+			Expect(service.Spec.Ports[1].Name).To(Equal("http"))
+			Expect(service.Spec.Ports[1].Port).To(Equal(int32(2222)))
+			Expect(service.Spec.Ports[2].Name).To(Equal("amqps"))
+			Expect(service.Spec.Ports[2].Port).To(Equal(int32(3333)))
+			Expect(service.Spec.Ports[3].Name).To(Equal("https"))
+			Expect(service.Spec.Ports[3].Port).To(Equal(int32(4444)))
+		})
+	})
+
+	Context("When clustering is enabled", func() {
+		BeforeEach(func() {
+			instance.Spec.EtcdEndpoints = []string{"etcd-0:2379"}
+		})
+
+		It("Should include clustering port", func() {
+			reconciler.Reconcile(context.Background())
+
+			service := &corev1.Service{}
+			err := k8sClient.Get(context.Background(), namespacedName, service)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(service.Spec.Ports).To(HaveLen(3)) // amqp, http, and clustering
+			Expect(service.Spec.Ports[2].Name).To(Equal("clustering"))
+			Expect(service.Spec.Ports[2].Port).To(Equal(int32(5679)))
+		})
+	})
+
+	Context("When updating fields", func() {
+		BeforeEach(func() {
+			instance.Spec.Ports = []corev1.ContainerPort{
+				{
+					Name:          "amqp",
+					ContainerPort: 5672,
+				},
+			}
+			reconciler.Reconcile(context.Background())
+		})
+
+		It("Should update ports when they change", func() {
+			instance.Spec.Ports = []corev1.ContainerPort{
+				{
+					Name:          "amqp",
+					ContainerPort: 1111,
+				},
+			}
+			reconciler.Reconcile(context.Background())
+
+			service := &corev1.Service{}
+			err := k8sClient.Get(context.Background(), namespacedName, service)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(service.Spec.Ports[0].Port).To(Equal(int32(1111)))
+		})
+
+		It("Should not update ports when they are the same", func() {
+			instance.Spec.Ports = []corev1.ContainerPort{
+				{
+					Name:          "amqp",
+					ContainerPort: 5672,
+				},
+			}
+			reconciler.Reconcile(context.Background())
+
+			service := &corev1.Service{}
+			err := k8sClient.Get(context.Background(), namespacedName, service)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(service.Spec.Ports[0].Port).To(Equal(int32(5672)))
 		})
 	})
 })

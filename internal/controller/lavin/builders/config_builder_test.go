@@ -1,6 +1,7 @@
 package builder
 
 import (
+	"context"
 	cloudamqpcomv1alpha1 "lavinmq-operator/api/v1alpha1"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -8,6 +9,7 @@ import (
 	ini "gopkg.in/ini.v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 )
 
@@ -24,25 +26,36 @@ func verifyConfigMapEquality(configMap *corev1.ConfigMap, expectedConfig string)
 }
 
 var _ = Describe("ConfigBuilder", func() {
+	var namespacedName = types.NamespacedName{
+		Name:      "test-resource",
+		Namespace: "default",
+	}
 	var (
-		resourceName = "test-resource"
-		instance     = &cloudamqpcomv1alpha1.LavinMQ{
+		instance = &cloudamqpcomv1alpha1.LavinMQ{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      resourceName,
-				Namespace: "default",
+				Name:      namespacedName.Name,
+				Namespace: namespacedName.Namespace,
 			},
 		}
-		builder ServiceConfigBuilder
+		builder *ConfigReconciler
 	)
 
 	BeforeEach(func() {
-		builder = ServiceConfigBuilder{
+		builder = &ConfigReconciler{
 			ResourceBuilder: &ResourceBuilder{
 				Instance: instance,
 				Scheme:   scheme.Scheme,
+				Client:   k8sClient,
 			},
 		}
+
+		Expect(k8sClient.Create(context.Background(), instance)).To(Succeed())
 	})
+
+	AfterEach(func() {
+		Expect(k8sClient.Delete(context.Background(), instance)).To(Succeed())
+	})
+
 	Context("When building a default ConfigMap", func() {
 		var expectedConfig = `
 			[main]
@@ -63,10 +76,13 @@ var _ = Describe("ConfigBuilder", func() {
 			advertised_uri = tcp://test-resource:5679
 	`
 		It("Should return a default ConfigMap", func() {
-			obj, err := builder.Build()
-			configMap := obj.(*corev1.ConfigMap)
+			builder.Reconcile(context.Background())
+
+			configMap := &corev1.ConfigMap{}
+
+			err := k8sClient.Get(context.Background(), namespacedName, configMap)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(configMap.Name).To(Equal("test-resource-config"))
+			Expect(configMap.Name).To(Equal(namespacedName.Name))
 			verifyConfigMapEquality(configMap, expectedConfig)
 		})
 	})
@@ -91,6 +107,8 @@ var _ = Describe("ConfigBuilder", func() {
 					ContainerPort: 4444,
 				},
 			}
+
+			Expect(k8sClient.Update(context.Background(), instance)).To(Succeed())
 		})
 
 		expectedConfig := `
@@ -117,96 +135,54 @@ var _ = Describe("ConfigBuilder", func() {
 		`
 
 		It("Should setup ports in according section", func() {
-			obj, err := builder.Build()
-			configMap := obj.(*corev1.ConfigMap)
+			builder.Reconcile(context.Background())
+
+			configMap := &corev1.ConfigMap{}
+			err := k8sClient.Get(context.Background(), namespacedName, configMap)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(configMap.Name).To(Equal("test-resource-config"))
+			Expect(configMap.Name).To(Equal(namespacedName.Name))
 			verifyConfigMapEquality(configMap, expectedConfig)
 		})
 
 	})
 
-	Context("When diffing config maps", func() {
-		var (
-			oldConfigMap *corev1.ConfigMap
-			newConfigMap *corev1.ConfigMap
-		)
+	// I think this test is not needed anymore with the new "reconciler" approach where it updates the configmap directly.
+	// 	Context("When diffing config maps", func() {
+	// 		var (
+	// 			oldConfigMap *corev1.ConfigMap
+	// 		)
 
-		BeforeEach(func() {
-			oldConfigMap = &corev1.ConfigMap{
-				Data: map[string]string{
-					"lavinmq.ini": `
-[main]
-log_level = info
-data_dir = /var/lib/lavinmq
+	// 		BeforeEach(func() {
+	// 			oldConfigMap = &corev1.ConfigMap{
+	// 				Data: map[string]string{
+	// 					"lavinmq.ini": `
+	// [main]
+	// log_level = info
+	// data_dir = /var/lib/lavinmq
 
-[mgmt]
-bind = 0.0.0.0
+	// [mgmt]
+	// bind = 0.0.0.0
 
-[amqp]
-bind = 0.0.0.0
-heartbeat = 300
+	// [amqp]
+	// bind = 0.0.0.0
+	// heartbeat = 300
 
-[clustering]
-enabled = true
-bind = 0.0.0.0
-port = 5679
-advertised_uri = tcp://test-resource:5679`,
-				},
-			}
-			newConfigMap = &corev1.ConfigMap{
-				Data: map[string]string{
-					"lavinmq.ini": `
-[main]
-log_level = info
-data_dir = /var/lib/lavinmq
+	// [clustering]
+	// enabled = true
+	// bind = 0.0.0.0
+	// port = 5679
+	// advertised_uri = tcp://test-resource:5679`,
+	// 				},
+	// 			}
+	// 		})
 
-[mgmt]
-bind = 0.0.0.0
+	// 		It("should return no diff when configs are identical", func() {
+	// 			builder.Reconcile(context.Background())
 
-[amqp]
-bind = 0.0.0.0
-heartbeat = 300
-
-[clustering]
-enabled = true
-bind = 0.0.0.0
-port = 5679
-advertised_uri = tcp://test-resource:5679`,
-				},
-			}
-		})
-
-		It("should return no diff when configs are identical", func() {
-			result, diff, err := builder.Diff(oldConfigMap, newConfigMap)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(diff).To(BeFalse())
-			Expect(result).To(Equal(oldConfigMap))
-		})
-
-		It("should return a diff when config content changes", func() {
-			newConfigMap.Data["lavinmq.ini"] = `
-[main]
-log_level = debug
-data_dir = /var/lib/lavinmq
-
-[mgmt]
-bind = 0.0.0.0
-
-[amqp]
-bind = 0.0.0.0
-heartbeat = 300
-
-[clustering]
-enabled = true
-bind = 0.0.0.0
-port = 5679
-advertised_uri = tcp://test-resource:5679`
-
-			result, diff, err := builder.Diff(oldConfigMap, newConfigMap)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(diff).To(BeTrue())
-			Expect(result.(*corev1.ConfigMap).Data["lavinmq.ini"]).To(Equal(newConfigMap.Data["lavinmq.ini"]))
-		})
-	})
+	//			configMap := &corev1.ConfigMap{}
+	//			err := k8sClient.Get(context.Background(), types.NamespacedName{Name: "test-resource-config", Namespace: "default"}, configMap)
+	//			Expect(err).NotTo(HaveOccurred())
+	//			Expect(configMap.Data["lavinmq.ini"]).To(Equal(oldConfigMap.Data["lavinmq.ini"]))
+	//		})
+	//	})
 })

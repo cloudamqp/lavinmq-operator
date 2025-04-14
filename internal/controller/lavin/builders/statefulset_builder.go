@@ -12,9 +12,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type StatefulSetReconciler struct {
@@ -53,39 +51,35 @@ func (b *StatefulSetReconciler) Reconcile(ctx context.Context) (ctrl.Result, err
 	return ctrl.Result{}, nil
 }
 
-func (b *StatefulSetBuilder) NewObject() client.Object {
+func (b *StatefulSetReconciler) newObject() *appsv1.StatefulSet {
 	labels := utils.LabelsForLavinMQ(b.Instance)
 
-	return &appsv1.StatefulSet{
+	sts := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      b.Instance.Name,
 			Namespace: b.Instance.Namespace,
 			Labels:    labels,
 		},
 	}
+
+	b.appendSpec(sts)
+	b.appendTlsConfig(sts)
+
+	return sts
 }
 
-func (b *StatefulSetBuilder) Build() (client.Object, error) {
-	statefulset := b.baseStatefulSet()
-
-	b.appendTlsConfig(statefulset)
-
-	return statefulset, nil
-}
-
-func (b *StatefulSetBuilder) baseStatefulSet() *appsv1.StatefulSet {
-	statefulset := b.NewObject().(*appsv1.StatefulSet)
+func (b *StatefulSetReconciler) appendSpec(sts *appsv1.StatefulSet) *appsv1.StatefulSet {
 	configVolumeName := fmt.Sprintf("%s-config", b.Instance.Name)
 
-	statefulset.Spec = appsv1.StatefulSetSpec{
+	sts.Spec = appsv1.StatefulSetSpec{
 		Replicas: &b.Instance.Spec.Replicas,
 		Selector: &metav1.LabelSelector{
-			MatchLabels: statefulset.Labels,
+			MatchLabels: sts.Labels,
 		},
 		ServiceName: fmt.Sprintf("%s-service", b.Instance.Name),
 		Template: corev1.PodTemplateSpec{
 			ObjectMeta: metav1.ObjectMeta{
-				Labels:      statefulset.Labels,
+				Labels:      sts.Labels,
 				Annotations: make(map[string]string),
 			},
 			Spec: corev1.PodSpec{
@@ -142,17 +136,18 @@ func (b *StatefulSetBuilder) baseStatefulSet() *appsv1.StatefulSet {
 		VolumeClaimTemplates: []corev1.PersistentVolumeClaim{
 			{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: "data",
+					Name:      "data",
+					Namespace: b.Instance.Namespace,
 				},
 				Spec: b.Instance.Spec.DataVolumeClaimSpec,
 			},
 		},
 	}
 
-	return statefulset
+	return sts
 }
 
-func (b *StatefulSetBuilder) cliArgs() []string {
+func (b *StatefulSetReconciler) cliArgs() []string {
 	defaultArgs := []string{
 		"--bind=0.0.0.0",
 		"--guest-only-loopback=false",
@@ -169,21 +164,21 @@ func (b *StatefulSetBuilder) cliArgs() []string {
 	return defaultArgs
 }
 
-func (b *StatefulSetBuilder) appendTlsConfig(statefulset *appsv1.StatefulSet) {
+func (b *StatefulSetReconciler) appendTlsConfig(sts *appsv1.StatefulSet) {
 	if b.Instance.Spec.TlsSecret == nil {
 		return
 	}
 
-	statefulset.Spec.Template.Spec.Containers[0].VolumeMounts = append(
-		statefulset.Spec.Template.Spec.Containers[0].VolumeMounts,
+	sts.Spec.Template.Spec.Containers[0].VolumeMounts = append(
+		sts.Spec.Template.Spec.Containers[0].VolumeMounts,
 		corev1.VolumeMount{
 			Name:      "tls",
 			MountPath: "/etc/lavinmq/tls",
 			ReadOnly:  true,
 		},
 	)
-	statefulset.Spec.Template.Spec.Volumes = append(
-		statefulset.Spec.Template.Spec.Volumes,
+	sts.Spec.Template.Spec.Volumes = append(
+		sts.Spec.Template.Spec.Volumes,
 		corev1.Volume{
 			Name: "tls",
 			VolumeSource: corev1.VolumeSource{
@@ -195,84 +190,44 @@ func (b *StatefulSetBuilder) appendTlsConfig(statefulset *appsv1.StatefulSet) {
 	)
 }
 
-func (b *StatefulSetBuilder) Diff(old, new client.Object) (client.Object, bool, error) {
+func (b *StatefulSetReconciler) updateFields(ctx context.Context, sts *appsv1.StatefulSet) error {
 	logger := b.Logger
-	oldSts := old.(*appsv1.StatefulSet)
-	newSts := new.(*appsv1.StatefulSet)
-	changed := false
 
 	//	'replicas', 'ordinals', 'template', 'updateStrategy',
 	// 'persistentVolumeClaimRetentionPolicy' and 'minReadySeconds',
 
-	if *oldSts.Spec.Replicas != *newSts.Spec.Replicas {
-		logger.Info("Replicas changed", "old", oldSts.Spec.Replicas, "new", newSts.Spec.Replicas)
+	if *sts.Spec.Replicas != int32(b.Instance.Spec.Replicas) {
+		logger.Info("Replicas changed", "old", sts.Spec.Replicas, "new", b.Instance.Spec.Replicas)
 		// TODO: Add support for scaling.
-		oldSts.Spec.Replicas = newSts.Spec.Replicas
-		changed = true
+		sts.Spec.Replicas = &b.Instance.Spec.Replicas
 	}
 
-	if diff, err := b.diffTemplate(&oldSts.Spec.Template.Spec, &newSts.Spec.Template.Spec); err != nil {
-		return nil, false, err
-	} else if diff {
-		changed = true
-	}
+	b.diffTemplate(&sts.Spec.Template.Spec)
 
 	// TODO: Do we need to do a disk check here now that we have a PVC?
 
-	return oldSts, changed, nil
+	return nil
 }
 
-func (b *StatefulSetBuilder) diffPersistentVolumeClaim() (bool, error) {
-	changed := false
-	for i := 0; i < int(b.Instance.Spec.Replicas); i++ {
-		pvc := &corev1.PersistentVolumeClaim{}
-		err := b.Client.Get(context.Background(), types.NamespacedName{Name: fmt.Sprintf("data-%s-%d", b.Instance.Name, i), Namespace: b.Instance.Namespace}, pvc)
-		if err != nil {
-			return false, err
-		}
-
-		comp := pvc.Spec.Resources.Requests.Storage().Cmp(*b.Instance.Spec.DataVolumeClaimSpec.Resources.Requests.Storage())
-
-		if comp == -1 {
-			changed = true
-			pvc.Spec.Resources.Requests = b.Instance.Spec.DataVolumeClaimSpec.Resources.Requests
-			err = b.Client.Update(context.Background(), pvc)
-			if err != nil {
-				return false, err
-			}
-
-			b.Logger.Info("PVC size increased", "pvc", pvc.Name)
-		}
-	}
-
-	return changed, nil
-}
-
-func (b *StatefulSetBuilder) diffTemplate(old, new *corev1.PodSpec) (bool, error) {
-	changed := false
-	if len(old.Containers) != len(new.Containers) && len(old.Containers) != 1 {
-		return false, fmt.Errorf("container count mismatch, expects 1")
-	}
-
+func (b *StatefulSetReconciler) diffTemplate(old *corev1.PodSpec) {
 	// Pointer the old as that's the object we're mutating
 	oldContainer := &old.Containers[0]
-	newContainer := new.Containers[0]
 
-	if oldContainer.Image != newContainer.Image {
-		oldContainer.Image = newContainer.Image
-		changed = true
+	if oldContainer.Image != b.Instance.Spec.Image {
+		oldContainer.Image = b.Instance.Spec.Image
+	}
+
+	cliArgs := b.cliArgs()
+	// TODO: Expand this to own methods and granular checks
+	if !reflect.DeepEqual(oldContainer.Args, cliArgs) {
+		b.Logger.Info("cli args changed, updating")
+		oldContainer.Args = cliArgs
 	}
 
 	// TODO: Expand this to own methods and granular checks
-	if !reflect.DeepEqual(oldContainer.Args, newContainer.Args) {
-		oldContainer.Args = newContainer.Args
-		changed = true
-	}
-
-	// TODO: Expand this to own methods and granular checks
-	if !reflect.DeepEqual(oldContainer.Ports, newContainer.Ports) {
-		oldContainer.Ports = newContainer.Ports
-		changed = true
+	if !reflect.DeepEqual(oldContainer.Ports, b.Instance.Spec.Ports) {
+		b.Logger.Info("ports changed, updating")
+		oldContainer.Ports = b.Instance.Spec.Ports
 	}
 
 	index := slices.IndexFunc(old.Volumes, func(v corev1.Volume) bool {
@@ -280,22 +235,34 @@ func (b *StatefulSetBuilder) diffTemplate(old, new *corev1.PodSpec) (bool, error
 	})
 
 	if index != -1 {
-		secretName := old.Volumes[index].VolumeSource.Secret.SecretName
+		oldVolume := &old.Volumes[index]
+		secretName := oldVolume.VolumeSource.Secret.SecretName
 		// Checks if the secret name is the same as the one in the instance spec
 		if b.Instance.Spec.TlsSecret != nil && b.Instance.Spec.TlsSecret.Name != secretName {
-			changed = true
+			b.Logger.Info("tls secret changed, updating")
+			oldVolume = &corev1.Volume{
+				Name: "tls",
+				VolumeSource: corev1.VolumeSource{
+					Secret: &corev1.SecretVolumeSource{
+						SecretName: b.Instance.Spec.TlsSecret.Name,
+					},
+				},
+			}
 		}
+	} else if b.Instance.Spec.TlsSecret != nil {
+		b.Logger.Info("adding tls secret to volumes")
+		old.Volumes = append(old.Volumes, corev1.Volume{
+			Name: "tls",
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: b.Instance.Spec.TlsSecret.Name,
+				},
+			},
+		})
 	}
+}
 
-	if len(old.Volumes) != len(new.Volumes) {
-		changed = true
-	}
-
-	old.Volumes = new.Volumes
-
-	if changed {
-		b.Logger.Info("Template changed, updating")
-	}
-
-	return changed, nil
+// Name returns the name of the statefulset reconciler
+func (b *StatefulSetReconciler) Name() string {
+	return "statefulset"
 }

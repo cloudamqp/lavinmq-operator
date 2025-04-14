@@ -8,6 +8,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
@@ -42,6 +43,7 @@ func (b *PVCReconciler) Reconcile(ctx context.Context) (ctrl.Result, error) {
 
 		err = b.Client.Update(ctx, &pvc)
 		if err != nil {
+			b.Logger.Error(err, "Failed to update PVC")
 			return ctrl.Result{}, err
 		}
 	}
@@ -77,12 +79,26 @@ func (b *PVCReconciler) updateFields(ctx context.Context, pvc *corev1.Persistent
 		b.Logger.Info("Volume size changed, increasing",
 			"old", pvc.Spec.Resources.Requests.Storage(),
 			"new", b.Instance.Spec.DataVolumeClaimSpec.Resources.Requests.Storage())
-		pvc.Spec.Resources.Requests = b.Instance.Spec.DataVolumeClaimSpec.Resources.Requests
+		storageClassName := *pvc.Spec.StorageClassName
 
+		storageClass := &corev1.StorageClass{}
+		err := b.Client.Get(ctx, types.NamespacedName{Name: *storageClassName}, storageClass)
+		if err != nil {
+			return err
+		}
+
+		oldPvc := pvc.DeepCopy()
+		pvc.Spec.Resources.Requests[corev1.ResourceStorage] = b.Instance.Spec.DataVolumeClaimSpec.Resources.Requests[corev1.ResourceStorage]
+		b.Logger.Info("Volume size changed", "old", oldPvc.Spec.Resources.Requests.Storage(), "new", pvc.Spec.Resources.Requests.Storage())
 	case 1:
 		b.Logger.Info("Volume size decreased, not supported")
 		return fmt.Errorf("volume size decreased, not supported")
 	}
 
 	return nil
+}
+
+// Name returns the name of the PVC reconciler
+func (b *PVCReconciler) Name() string {
+	return "pvc"
 }

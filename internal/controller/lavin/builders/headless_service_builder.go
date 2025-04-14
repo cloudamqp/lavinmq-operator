@@ -2,7 +2,6 @@ package builder
 
 import (
 	"context"
-	"fmt"
 	"lavinmq-operator/internal/controller/utils"
 	"reflect"
 
@@ -68,7 +67,7 @@ func (b *HeadlessServiceReconciler) newObject() *corev1.Service {
 
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-service", b.Instance.Name),
+			Name:      b.Instance.Name,
 			Namespace: b.Instance.Namespace,
 			Labels:    utils.LabelsForLavinMQ(b.Instance),
 		},
@@ -88,4 +87,9 @@ func (b *HeadlessServiceReconciler) updateFields(ctx context.Context, service *c
 	if !reflect.DeepEqual(service.Spec.Ports, newService.Spec.Ports) {
 		service.Spec.Ports = newService.Spec.Ports
 	}
+}
+
+// Name returns the name of the headless service reconciler
+func (b *HeadlessServiceReconciler) Name() string {
+	return "headless-service"
 }
