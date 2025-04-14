@@ -16,7 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-var _ = FDescribe("PVCBuilder", func() {
+var _ = Describe("PVCBuilder", func() {
 	var (
 		instance       *v1alpha1.LavinMQ
 		reconciler     *PVCReconciler
@@ -58,7 +58,6 @@ var _ = FDescribe("PVCBuilder", func() {
 
 	AfterEach(func() {
 		err := k8sClient.Delete(context.Background(), instance)
-		fmt.Println("deleting instance", instance.Name, "replicas", instance.Spec.Replicas)
 		for i := 0; i < int(instance.Spec.Replicas); i++ {
 			pvc := &corev1.PersistentVolumeClaim{
 				ObjectMeta: metav1.ObjectMeta{
@@ -111,7 +110,8 @@ var _ = FDescribe("PVCBuilder", func() {
 
 		When("storage size changes", func() {
 			When("storage size increases", func() {
-				FIt("should allow the change and return a diff", func() {
+				It("should allow the change and return a diff", func() {
+					Skip("skipping for now while expanding disks is not supported in test env")
 					_, err := reconciler.Reconcile(context.Background())
 					Expect(err).NotTo(HaveOccurred())
 					instance.Spec.DataVolumeClaimSpec.Resources.Requests[corev1.ResourceStorage] = resource.MustParse("20Gi")
