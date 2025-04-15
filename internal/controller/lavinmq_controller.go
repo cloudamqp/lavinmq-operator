@@ -21,8 +21,7 @@ import (
 	"fmt"
 
 	cloudamqpcomv1alpha1 "lavinmq-operator/api/v1alpha1"
-
-	builder "lavinmq-operator/internal/controller/lavin/builders"
+	"lavinmq-operator/internal/reconciler"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -80,35 +79,22 @@ func (r *LavinMQReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	}
 
 	logger.Info("LavinMQ found", "name", instance.Name)
-	resourceBuilder := builder.ResourceBuilder{
+	resourceReconciler := reconciler.ResourceReconciler{
 		Instance: instance,
 		Scheme:   r.Scheme,
 		Logger:   logger,
 		Client:   r.Client,
 	}
 
-	reconcilers := resourceBuilder.Reconcilers()
+	reconcilers := resourceReconciler.Reconcilers()
 
-	// Track if a diff requires a restart
-	// shouldRestart := false
 	for _, reconciler := range reconcilers {
-		// TODO: Should we check the result and take some action on it?
 		_, err := reconciler.Reconcile(ctx)
 		if err != nil {
 			logger.Error(err, "Failed to reconcile resource", "name", reconciler.Name())
 			return ctrl.Result{}, err
 		}
 	}
-
-	// // If ConfigBuilder changed, trigger a restart using the annotation trick
-	// if shouldRestart {
-	// 	logger.Info("Triggering restart with annotation trick")
-	// 	err := r.RestartStatefulSet(ctx, instance)
-	// 	if err != nil {
-	// 		logger.Error(err, "Failed to restart StatefulSet after config or secret change")
-	// 		return ctrl.Result{}, err
-	// 	}
-	// }
 
 	logger.Info("Updated resources for LavinMQ")
 

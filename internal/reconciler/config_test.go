@@ -1,8 +1,9 @@
-package builder
+package reconciler_test
 
 import (
 	"context"
 	cloudamqpcomv1alpha1 "lavinmq-operator/api/v1alpha1"
+	"lavinmq-operator/internal/reconciler"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -32,7 +33,7 @@ var _ = Describe("ConfigBuilder", func() {
 	}
 	var (
 		instance *cloudamqpcomv1alpha1.LavinMQ
-		builder  *ConfigReconciler
+		builder  *reconciler.ConfigReconciler
 	)
 
 	BeforeEach(func() {
@@ -43,8 +44,8 @@ var _ = Describe("ConfigBuilder", func() {
 			},
 		}
 
-		builder = &ConfigReconciler{
-			ResourceBuilder: &ResourceBuilder{
+		builder = &reconciler.ConfigReconciler{
+			ResourceReconciler: &reconciler.ResourceReconciler{
 				Instance: instance,
 				Scheme:   scheme.Scheme,
 				Client:   k8sClient,

@@ -1,9 +1,10 @@
-package builder
+package reconciler_test
 
 import (
 	"context"
 	"fmt"
 	"lavinmq-operator/api/v1alpha1"
+	"lavinmq-operator/internal/reconciler"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -19,7 +20,7 @@ import (
 var _ = Describe("PVCBuilder", func() {
 	var (
 		instance       *v1alpha1.LavinMQ
-		reconciler     *PVCReconciler
+		rc             *reconciler.PVCReconciler
 		namespacedName = types.NamespacedName{
 			Name:      "test-lavinmq",
 			Namespace: "default",
@@ -43,8 +44,8 @@ var _ = Describe("PVCBuilder", func() {
 				},
 			},
 		}
-		reconciler = &PVCReconciler{
-			ResourceBuilder: &ResourceBuilder{
+		rc = &reconciler.PVCReconciler{
+			ResourceReconciler: &reconciler.ResourceReconciler{
 				Instance: instance,
 				Scheme:   scheme.Scheme,
 				Client:   k8sClient,
@@ -78,7 +79,7 @@ var _ = Describe("PVCBuilder", func() {
 			err := k8sClient.Update(context.Background(), instance)
 			Expect(err).NotTo(HaveOccurred())
 
-			reconciler.Reconcile(context.Background())
+			rc.Reconcile(context.Background())
 
 			pvc := &corev1.PersistentVolumeClaim{}
 			err = k8sClient.Get(context.Background(), types.NamespacedName{Name: fmt.Sprintf("data-%s-0", instance.Name), Namespace: instance.Namespace}, pvc)
@@ -98,7 +99,7 @@ var _ = Describe("PVCBuilder", func() {
 				err := k8sClient.Update(context.Background(), instance)
 				Expect(err).NotTo(HaveOccurred())
 
-				_, err = reconciler.Reconcile(context.Background())
+				_, err = rc.Reconcile(context.Background())
 				Expect(err).NotTo(HaveOccurred())
 				pvc := &corev1.PersistentVolumeClaim{}
 				err = k8sClient.Get(context.Background(), types.NamespacedName{Name: fmt.Sprintf("data-%s-0", instance.Name), Namespace: instance.Namespace}, pvc)
@@ -111,7 +112,7 @@ var _ = Describe("PVCBuilder", func() {
 			When("storage size increases", func() {
 				It("should allow the change and return a diff", func() {
 					Skip("skipping for now while expanding disks is not supported in test env")
-					_, err := reconciler.Reconcile(context.Background())
+					_, err := rc.Reconcile(context.Background())
 					Expect(err).NotTo(HaveOccurred())
 					instance.Spec.DataVolumeClaimSpec.Resources.Requests[corev1.ResourceStorage] = resource.MustParse("20Gi")
 
@@ -123,7 +124,7 @@ var _ = Describe("PVCBuilder", func() {
 					err = k8sClient.Update(context.Background(), instance)
 					Expect(err).NotTo(HaveOccurred())
 
-					_, err = reconciler.Reconcile(context.Background())
+					_, err = rc.Reconcile(context.Background())
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(err).NotTo(HaveOccurred())
@@ -142,7 +143,7 @@ var _ = Describe("PVCBuilder", func() {
 					err := k8sClient.Update(context.Background(), instance)
 					Expect(err).NotTo(HaveOccurred())
 
-					_, err = reconciler.Reconcile(context.Background())
+					_, err = rc.Reconcile(context.Background())
 					Expect(err).To(HaveOccurred())
 					Expect(err.Error()).To(ContainSubstring("volume size decreased, not supported"))
 				})

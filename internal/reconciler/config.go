@@ -1,4 +1,4 @@
-package builder
+package reconciler
 
 import (
 	"context"
@@ -15,7 +15,7 @@ import (
 )
 
 type ConfigReconciler struct {
-	*ResourceBuilder
+	*ResourceReconciler
 }
 
 var (
@@ -40,9 +40,9 @@ port = 5679
 `
 )
 
-func (builder *ResourceBuilder) ConfigReconciler() *ConfigReconciler {
+func (reconciler *ResourceReconciler) ConfigReconciler() *ConfigReconciler {
 	return &ConfigReconciler{
-		ResourceBuilder: builder,
+		ResourceReconciler: reconciler,
 	}
 }
 

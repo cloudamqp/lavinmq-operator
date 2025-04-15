@@ -1,4 +1,4 @@
-package builder
+package reconciler_test
 
 import (
 	"context"
@@ -13,12 +13,13 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 
 	lavinmqv1alpha1 "lavinmq-operator/api/v1alpha1"
+	"lavinmq-operator/internal/reconciler"
 )
 
 var _ = Describe("StatefulSetBuilder", func() {
 	var (
 		instance       *lavinmqv1alpha1.LavinMQ
-		reconciler     *StatefulSetReconciler // System Under Test
+		rc             *reconciler.StatefulSetReconciler // System Under Test
 		namespacedName = types.NamespacedName{
 			Name:      "test-lavinmq",
 			Namespace: "default",
@@ -45,8 +46,8 @@ var _ = Describe("StatefulSetBuilder", func() {
 			},
 		}
 
-		reconciler = &StatefulSetReconciler{
-			ResourceBuilder: &ResourceBuilder{
+		rc = &reconciler.StatefulSetReconciler{
+			ResourceReconciler: &reconciler.ResourceReconciler{
 				Instance: instance,
 				Scheme:   scheme.Scheme,
 				Client:   k8sClient,
@@ -67,7 +68,7 @@ var _ = Describe("StatefulSetBuilder", func() {
 				instance.Spec.Image = "test-image:latest2"
 				Expect(k8sClient.Update(context.Background(), instance)).To(Succeed())
 
-				_, err := reconciler.Reconcile(context.Background())
+				_, err := rc.Reconcile(context.Background())
 				Expect(err).NotTo(HaveOccurred())
 
 				sts := &appsv1.StatefulSet{}

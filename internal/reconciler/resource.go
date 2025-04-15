@@ -1,4 +1,4 @@
-package builder
+package reconciler
 
 import (
 	"context"
@@ -11,14 +11,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-type ResourceBuilder struct {
+type ResourceReconciler struct {
 	Instance *cloudamqpcomv1alpha1.LavinMQ
 	Scheme   *runtime.Scheme
 	Logger   logr.Logger
 	Client   client.Client
 }
 
-func (reconciler *ResourceBuilder) Reconcilers() []Reconciler {
+func (reconciler *ResourceReconciler) Reconcilers() []Reconciler {
 	return []Reconciler{
 		reconciler.ConfigReconciler(),
 		reconciler.HeadlessServiceReconciler(),
@@ -33,7 +33,7 @@ type Reconciler interface {
 	Name() string
 }
 
-func (reconciler *ResourceBuilder) GetItem(ctx context.Context, obj client.Object) error {
+func (reconciler *ResourceReconciler) GetItem(ctx context.Context, obj client.Object) error {
 	err := reconciler.Client.Get(ctx, types.NamespacedName{Name: obj.GetName(), Namespace: obj.GetNamespace()}, obj)
 	if err != nil {
 		return err
@@ -42,7 +42,7 @@ func (reconciler *ResourceBuilder) GetItem(ctx context.Context, obj client.Objec
 	return nil
 }
 
-func (reconciler *ResourceBuilder) CreateItem(ctx context.Context, obj client.Object) error {
+func (reconciler *ResourceReconciler) CreateItem(ctx context.Context, obj client.Object) error {
 
 	reconciler.Logger.Info("Creating item", "name", obj.GetName(), "namespace", obj.GetNamespace())
 	// Set owner reference

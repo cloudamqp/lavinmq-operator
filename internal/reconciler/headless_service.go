@@ -1,4 +1,4 @@
-package builder
+package reconciler
 
 import (
 	"context"
@@ -13,12 +13,12 @@ import (
 )
 
 type HeadlessServiceReconciler struct {
-	*ResourceBuilder
+	*ResourceReconciler
 }
 
-func (builder *ResourceBuilder) HeadlessServiceReconciler() *HeadlessServiceReconciler {
+func (reconciler *ResourceReconciler) HeadlessServiceReconciler() *HeadlessServiceReconciler {
 	return &HeadlessServiceReconciler{
-		ResourceBuilder: builder,
+		ResourceReconciler: reconciler,
 	}
 }
 

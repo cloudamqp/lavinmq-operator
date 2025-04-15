@@ -1,4 +1,4 @@
-package builder
+package reconciler
 
 import (
 	"context"
@@ -12,12 +12,12 @@ import (
 )
 
 type PVCReconciler struct {
-	*ResourceBuilder
+	*ResourceReconciler
 }
 
-func (reconciler *ResourceBuilder) PVCReconciler() *PVCReconciler {
+func (reconciler *ResourceReconciler) PVCReconciler() *PVCReconciler {
 	return &PVCReconciler{
-		ResourceBuilder: reconciler,
+		ResourceReconciler: reconciler,
 	}
 }
 

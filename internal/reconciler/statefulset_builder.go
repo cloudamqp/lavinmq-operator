@@ -1,4 +1,4 @@
-package builder
+package reconciler
 
 import (
 	"context"
@@ -16,12 +16,12 @@ import (
 )
 
 type StatefulSetReconciler struct {
-	*ResourceBuilder
+	*ResourceReconciler
 }
 
-func (builder *ResourceBuilder) StatefulSetReconciler() *StatefulSetReconciler {
+func (reconciler *ResourceReconciler) StatefulSetReconciler() *StatefulSetReconciler {
 	return &StatefulSetReconciler{
-		ResourceBuilder: builder,
+		ResourceReconciler: reconciler,
 	}
 }
 
