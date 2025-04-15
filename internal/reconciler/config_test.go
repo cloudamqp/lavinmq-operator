@@ -78,7 +78,7 @@ var _ = Describe("ConfigReconciler", func() {
 			enabled = true
 			bind = 0.0.0.0
 			port = 5679
-			advertised_uri = tcp://test-resource:5679
+			etcd_prefix = test-resource
 	`
 		It("Should create a default ConfigMap", func() {
 			rc.Reconcile(context.Background())
@@ -136,7 +136,7 @@ var _ = Describe("ConfigReconciler", func() {
 			enabled = true
 			bind = 0.0.0.0
 			port = 5679
-			advertised_uri = tcp://test-resource:5679
+			etcd_prefix = test-resource
 		`
 
 		It("Should setup ports in according section", func() {

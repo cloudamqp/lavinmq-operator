@@ -118,8 +118,8 @@ func (b *ConfigReconciler) newObject() (*corev1.ConfigMap, error) {
 		defaultConfig.Section("main").Key("consumer_timeout").SetValue(fmt.Sprintf("%d", b.Instance.Spec.Config.ConsumerTimeout))
 	}
 
-	// TODO: Add advertised uri may be wrong here. Headless service?
-	clusterConfig.Section("clustering").Key("advertised_uri").SetValue(fmt.Sprintf("tcp://%s:5679", b.Instance.Name))
+	// Sets the etcd-prefix config value to the instance name. Allows for multiple lavinmq clusters to share the same etcd cluster.
+	clusterConfig.Section("clustering").Key("etcd_prefix").SetValue(b.Instance.Name)
 
 	config := strings.Builder{}
 
