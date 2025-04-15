@@ -235,12 +235,11 @@ func (b *StatefulSetReconciler) diffTemplate(old *corev1.PodSpec) {
 	})
 
 	if index != -1 {
-		oldVolume := &old.Volumes[index]
-		secretName := oldVolume.VolumeSource.Secret.SecretName
+		secretName := old.Volumes[index].VolumeSource.Secret.SecretName
 		// Checks if the secret name is the same as the one in the instance spec
 		if b.Instance.Spec.TlsSecret != nil && b.Instance.Spec.TlsSecret.Name != secretName {
 			b.Logger.Info("tls secret changed, updating")
-			oldVolume = &corev1.Volume{
+			old.Volumes[index] = corev1.Volume{
 				Name: "tls",
 				VolumeSource: corev1.VolumeSource{
 					Secret: &corev1.SecretVolumeSource{
