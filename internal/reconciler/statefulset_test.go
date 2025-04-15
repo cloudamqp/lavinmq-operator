@@ -16,7 +16,7 @@ import (
 	"lavinmq-operator/internal/reconciler"
 )
 
-var _ = Describe("StatefulSetBuilder", func() {
+var _ = Describe("StatefulSetReconciler", func() {
 	var (
 		instance       *lavinmqv1alpha1.LavinMQ
 		rc             *reconciler.StatefulSetReconciler // System Under Test

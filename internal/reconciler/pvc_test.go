@@ -17,7 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-var _ = Describe("PVCBuilder", func() {
+var _ = Describe("PVCReconciler", func() {
 	var (
 		instance       *v1alpha1.LavinMQ
 		rc             *reconciler.PVCReconciler

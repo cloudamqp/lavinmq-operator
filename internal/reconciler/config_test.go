@@ -26,14 +26,14 @@ func verifyConfigMapEquality(configMap *corev1.ConfigMap, expectedConfig string)
 	}
 }
 
-var _ = Describe("ConfigBuilder", func() {
+var _ = Describe("ConfigReconciler", func() {
 	var namespacedName = types.NamespacedName{
 		Name:      "test-resource",
 		Namespace: "default",
 	}
 	var (
 		instance *cloudamqpcomv1alpha1.LavinMQ
-		builder  *reconciler.ConfigReconciler
+		rc       *reconciler.ConfigReconciler
 	)
 
 	BeforeEach(func() {
@@ -44,7 +44,7 @@ var _ = Describe("ConfigBuilder", func() {
 			},
 		}
 
-		builder = &reconciler.ConfigReconciler{
+		rc = &reconciler.ConfigReconciler{
 			ResourceReconciler: &reconciler.ResourceReconciler{
 				Instance: instance,
 				Scheme:   scheme.Scheme,
@@ -80,8 +80,8 @@ var _ = Describe("ConfigBuilder", func() {
 			port = 5679
 			advertised_uri = tcp://test-resource:5679
 	`
-		It("Should return a default ConfigMap", func() {
-			builder.Reconcile(context.Background())
+		It("Should create a default ConfigMap", func() {
+			rc.Reconcile(context.Background())
 
 			configMap := &corev1.ConfigMap{}
 
@@ -140,7 +140,7 @@ var _ = Describe("ConfigBuilder", func() {
 		`
 
 		It("Should setup ports in according section", func() {
-			builder.Reconcile(context.Background())
+			rc.Reconcile(context.Background())
 
 			configMap := &corev1.ConfigMap{}
 			err := k8sClient.Get(context.Background(), namespacedName, configMap)
