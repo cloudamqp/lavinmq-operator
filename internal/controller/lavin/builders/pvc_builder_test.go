@@ -57,7 +57,7 @@ var _ = Describe("PVCBuilder", func() {
 	})
 
 	AfterEach(func() {
-		err := k8sClient.Delete(context.Background(), instance)
+		Expect(k8sClient.Delete(context.Background(), instance)).To(Succeed())
 		for i := 0; i < int(instance.Spec.Replicas); i++ {
 			pvc := &corev1.PersistentVolumeClaim{
 				ObjectMeta: metav1.ObjectMeta{
@@ -71,7 +71,6 @@ var _ = Describe("PVCBuilder", func() {
 				Expect(apierrors.IsNotFound(err)).To(BeTrue())
 			}
 		}
-		Expect(err).NotTo(HaveOccurred())
 	})
 
 	Describe("Build", func() {

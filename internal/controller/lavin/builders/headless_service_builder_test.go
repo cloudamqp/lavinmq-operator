@@ -3,6 +3,7 @@ package builder
 import (
 	"context"
 	cloudamqpcomv1alpha1 "lavinmq-operator/api/v1alpha1"
+	"slices"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -10,6 +11,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 var _ = Describe("HeadlessServiceReconciler", func() {
@@ -18,23 +20,32 @@ var _ = Describe("HeadlessServiceReconciler", func() {
 		Namespace: "default",
 	}
 	var (
+		instance   *cloudamqpcomv1alpha1.LavinMQ
+		reconciler *HeadlessServiceReconciler
+	)
+
+	BeforeEach(func() {
 		instance = &cloudamqpcomv1alpha1.LavinMQ{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      namespacedName.Name,
 				Namespace: namespacedName.Namespace,
 			},
 		}
-		reconciler *HeadlessServiceReconciler
-	)
 
-	BeforeEach(func() {
 		reconciler = &HeadlessServiceReconciler{
 			ResourceBuilder: &ResourceBuilder{
 				Instance: instance,
 				Scheme:   scheme.Scheme,
 				Client:   k8sClient,
+				Logger:   log.FromContext(context.Background()),
 			},
 		}
+
+		Expect(k8sClient.Create(context.Background(), instance)).To(Succeed())
+	})
+
+	AfterEach(func() {
+		Expect(k8sClient.Delete(context.Background(), instance)).To(Succeed())
 	})
 
 	Context("When building a default Service", func() {
@@ -42,11 +53,10 @@ var _ = Describe("HeadlessServiceReconciler", func() {
 			reconciler.Reconcile(context.Background())
 
 			service := &corev1.Service{}
-			err := k8sClient.Get(context.Background(), namespacedName, service)
-			Expect(err).NotTo(HaveOccurred())
+			Expect(k8sClient.Get(context.Background(), namespacedName, service)).To(Succeed())
 			Expect(service.Name).To(Equal(namespacedName.Name))
 			Expect(service.Spec.ClusterIP).To(Equal("None"))
-			Expect(service.Spec.Ports).To(HaveLen(2)) // amqp and http by default
+			Expect(service.Spec.Ports).To(HaveLen(3)) // amqp, http, and mqtt
 		})
 	})
 
@@ -70,6 +80,8 @@ var _ = Describe("HeadlessServiceReconciler", func() {
 					ContainerPort: 4444,
 				},
 			}
+
+			Expect(k8sClient.Update(context.Background(), instance)).To(Succeed())
 		})
 
 		It("Should create service with all specified ports", func() {
@@ -93,6 +105,7 @@ var _ = Describe("HeadlessServiceReconciler", func() {
 	Context("When clustering is enabled", func() {
 		BeforeEach(func() {
 			instance.Spec.EtcdEndpoints = []string{"etcd-0:2379"}
+			Expect(k8sClient.Update(context.Background(), instance)).To(Succeed())
 		})
 
 		It("Should include clustering port", func() {
@@ -101,9 +114,12 @@ var _ = Describe("HeadlessServiceReconciler", func() {
 			service := &corev1.Service{}
 			err := k8sClient.Get(context.Background(), namespacedName, service)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(service.Spec.Ports).To(HaveLen(3)) // amqp, http, and clustering
-			Expect(service.Spec.Ports[2].Name).To(Equal("clustering"))
-			Expect(service.Spec.Ports[2].Port).To(Equal(int32(5679)))
+			Expect(service.Spec.Ports).To(HaveLen(4)) // amqp, http, mqtt and clustering
+			idx := slices.IndexFunc(service.Spec.Ports, func(port corev1.ServicePort) bool {
+				return port.Name == "clustering"
+			})
+			Expect(idx).NotTo(Equal(-1))
+			Expect(service.Spec.Ports[idx].Port).To(Equal(int32(5679)))
 		})
 	})
 
@@ -115,6 +131,7 @@ var _ = Describe("HeadlessServiceReconciler", func() {
 					ContainerPort: 5672,
 				},
 			}
+			Expect(k8sClient.Update(context.Background(), instance)).To(Succeed())
 			reconciler.Reconcile(context.Background())
 		})
 
@@ -125,11 +142,11 @@ var _ = Describe("HeadlessServiceReconciler", func() {
 					ContainerPort: 1111,
 				},
 			}
+			Expect(k8sClient.Update(context.Background(), instance)).To(Succeed())
 			reconciler.Reconcile(context.Background())
 
 			service := &corev1.Service{}
-			err := k8sClient.Get(context.Background(), namespacedName, service)
-			Expect(err).NotTo(HaveOccurred())
+			Expect(k8sClient.Get(context.Background(), namespacedName, service)).To(Succeed())
 			Expect(service.Spec.Ports[0].Port).To(Equal(int32(1111)))
 		})
 
@@ -140,11 +157,11 @@ var _ = Describe("HeadlessServiceReconciler", func() {
 					ContainerPort: 5672,
 				},
 			}
+			Expect(k8sClient.Update(context.Background(), instance)).To(Succeed())
 			reconciler.Reconcile(context.Background())
 
 			service := &corev1.Service{}
-			err := k8sClient.Get(context.Background(), namespacedName, service)
-			Expect(err).NotTo(HaveOccurred())
+			Expect(k8sClient.Get(context.Background(), namespacedName, service)).To(Succeed())
 			Expect(service.Spec.Ports[0].Port).To(Equal(int32(5672)))
 		})
 	})

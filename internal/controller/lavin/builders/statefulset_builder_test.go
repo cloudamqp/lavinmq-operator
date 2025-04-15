@@ -29,7 +29,7 @@ var _ = Describe("StatefulSetBuilder", func() {
 		instance = &lavinmqv1alpha1.LavinMQ{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test-lavinmq",
-				Namespace: "test-ns",
+				Namespace: "default",
 			},
 			Spec: lavinmqv1alpha1.LavinMQSpec{
 				Replicas: 1,
@@ -55,6 +55,10 @@ var _ = Describe("StatefulSetBuilder", func() {
 
 		err := k8sClient.Create(context.Background(), instance)
 		Expect(err).NotTo(HaveOccurred())
+	})
+
+	AfterEach(func() {
+		Expect(k8sClient.Delete(context.Background(), instance)).To(Succeed())
 	})
 
 	Describe("Reconcile", func() {

@@ -3,6 +3,7 @@ package builder
 import (
 	"context"
 	"fmt"
+	"lavinmq-operator/internal/controller/utils"
 	"reflect"
 	"strings"
 
@@ -75,17 +76,11 @@ func (b *ConfigReconciler) Reconcile(ctx context.Context) (ctrl.Result, error) {
 }
 
 func (b *ConfigReconciler) newObject() (*corev1.ConfigMap, error) {
-	labels := map[string]string{
-		"app.kubernetes.io/name":       "lavinmq",
-		"app.kubernetes.io/managed-by": "lavinmq-operator",
-		"app.kubernetes.io/instance":   b.Instance.Name,
-	}
-
 	configMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      b.Instance.Name,
 			Namespace: b.Instance.Namespace,
-			Labels:    labels,
+			Labels:    utils.LabelsForLavinMQ(b.Instance),
 		},
 		Data: map[string]string{},
 	}

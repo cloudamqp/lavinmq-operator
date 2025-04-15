@@ -31,16 +31,18 @@ var _ = Describe("ConfigBuilder", func() {
 		Namespace: "default",
 	}
 	var (
+		instance *cloudamqpcomv1alpha1.LavinMQ
+		builder  *ConfigReconciler
+	)
+
+	BeforeEach(func() {
 		instance = &cloudamqpcomv1alpha1.LavinMQ{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      namespacedName.Name,
 				Namespace: namespacedName.Namespace,
 			},
 		}
-		builder *ConfigReconciler
-	)
 
-	BeforeEach(func() {
 		builder = &ConfigReconciler{
 			ResourceBuilder: &ResourceBuilder{
 				Instance: instance,
@@ -64,10 +66,12 @@ var _ = Describe("ConfigBuilder", func() {
 
 			[mgmt]
 			bind = 0.0.0.0
+			port = 15672
 
 			[amqp]
 			bind = 0.0.0.0
 			heartbeat = 300
+			port = 5672
 
 			[clustering]
 			enabled = true
