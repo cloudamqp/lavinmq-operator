@@ -31,5 +31,7 @@ spec:
       requests:
         storage: 3Gi
   config:
-    consumer_timeout: 20000
+    main:
+      - key: consumer_timeout
+        val: 20000
 

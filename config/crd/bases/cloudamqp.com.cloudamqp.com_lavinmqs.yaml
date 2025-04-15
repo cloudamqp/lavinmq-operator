@@ -41,9 +41,102 @@ spec:
             properties:
               config:
                 properties:
-                  consumer_timeout:
-                    format: int64
-                    type: integer
+                  amqp:
+                    properties:
+                      channel_max:
+                        format: int64
+                        type: integer
+                      frame_max:
+                        format: int64
+                        type: integer
+                      heartbeat:
+                        format: int64
+                        type: integer
+                      max_message_size:
+                        format: int64
+                        type: integer
+                      port:
+                        format: int64
+                        type: integer
+                      tls_port:
+                        format: int64
+                        type: integer
+                    type: object
+                  clustering:
+                    properties:
+                      max_unsynced_actions:
+                        format: int64
+                        type: integer
+                    type: object
+                  main:
+                    properties:
+                      consumer_timeout:
+                        format: int64
+                        type: integer
+                      default_consumer_prefetch:
+                        format: int64
+                        type: integer
+                      default_password:
+                        type: string
+                      default_user:
+                        type: string
+                      free_disk_min:
+                        format: int64
+                        type: integer
+                      free_disk_warn:
+                        format: int64
+                        type: integer
+                      log_exchange:
+                        type: boolean
+                      log_level:
+                        type: string
+                      max_deleted_definitions:
+                        format: int64
+                        type: integer
+                      segment_size:
+                        format: int64
+                        type: integer
+                      set_timestamp:
+                        type: boolean
+                      socket_buffer_size:
+                        format: int64
+                        type: integer
+                      stats_interval:
+                        format: int64
+                        type: integer
+                      stats_log_size:
+                        format: int64
+                        type: integer
+                      tcp_keepalive:
+                        type: string
+                      tcp_nodelay:
+                        type: boolean
+                      tls_ciphers:
+                        type: string
+                      tls_min_version:
+                        type: string
+                    type: object
+                  mgmt:
+                    properties:
+                      port:
+                        format: int64
+                        type: integer
+                      tls_port:
+                        format: int64
+                        type: integer
+                    type: object
+                  mqtt:
+                    properties:
+                      max_inflight_messages:
+                        format: int64
+                        type: integer
+                      port:
+                        format: int64
+                        type: integer
+                      tls_port:
+                        format: int64
+                        type: integer
+                    type: object
                 type: object
               dataVolumeClaim:
                 description: Will override the accessmode and force it to ReadWriteOnce

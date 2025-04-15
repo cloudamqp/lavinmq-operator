@@ -57,9 +57,103 @@ type LavinMQSpec struct {
 	Config LavinMQConfig `json:"config,omitempty"`
 }
 
-type LavinMQConfig struct {
+type MainConfig struct {
 	// +optional
 	ConsumerTimeout uint64 `json:"consumer_timeout,omitempty"`
+
+	// +optional
+	DefaultConsumerPrefetch uint64 `json:"default_consumer_prefetch,omitempty"`
+
+	// +optional
+	DefaultPassword string `json:"default_password,omitempty"`
+
+	// +optional
+	DefaultUser string `json:"default_user,omitempty"`
+
+	// +optional
+	FreeDiskMin uint64 `json:"free_disk_min,omitempty"`
+
+	// +optional
+	FreeDiskWarn uint64 `json:"free_disk_warn,omitempty"`
+
+	// +optional
+	LogExchange bool `json:"log_exchange,omitempty"`
+
+	// +optional
+	LogLevel string `json:"log_level,omitempty"`
+
+	// +optional
+	MaxDeletedDefinitions uint64 `json:"max_deleted_definitions,omitempty"`
+
+	// +optional
+	SegmentSize uint64 `json:"segment_size,omitempty"`
+
+	// +optional
+	SetTimestamp bool `json:"set_timestamp,omitempty"`
+
+	// +optional
+	SocketBufferSize uint64 `json:"socket_buffer_size,omitempty"`
+
+	// +optional
+	StatsInterval uint64 `json:"stats_interval,omitempty"`
+
+	// +optional
+	StatsLogSize uint64 `json:"stats_log_size,omitempty"`
+
+	// +optional
+	TcpKeepalive string `json:"tcp_keepalive,omitempty"`
+
+	// +optional
+	TcpNodelay bool `json:"tcp_nodelay,omitempty"`
+
+	// +optional
+	TlsCiphers string `json:"tls_ciphers,omitempty"`
+
+	// +optional
+	TlsMinVersion string `json:"tls_min_version,omitempty"`
+}
+type MgmtConfig struct {
+	// +optional
+	Port uint64 `json:"port,omitempty"`
+
+	// +optional
+	TlsPort uint64 `json:"tls_port,omitempty"`
+}
+
+type AmqpConfig struct {
+	// +optional
+	ChannelMax uint64 `json:"channel_max,omitempty"`
+	// +optional
+	FrameMax uint64 `json:"frame_max,omitempty"`
+	// +optional
+	Heartbeat uint64 `json:"heartbeat,omitempty"`
+	// +optional
+	MaxMessageSize uint64 `json:"max_message_size,omitempty"`
+	// +optional
+	Port uint64 `json:"port,omitempty"`
+	// +optional
+	TlsPort uint64 `json:"tls_port,omitempty"`
+}
+
+type MqttConfig struct {
+	// +optional
+	MaxInflightMessages uint64 `json:"max_inflight_messages,omitempty"`
+	// +optional
+	Port uint64 `json:"port,omitempty"`
+	// +optional
+	TlsPort uint64 `json:"tls_port,omitempty"`
+}
+
+type ClusteringConfig struct {
+	// +optional
+	MaxUnsyncedActions uint64 `json:"max_unsynced_actions,omitempty"`
+}
+type LavinMQConfig struct {
+	Main       MainConfig       `json:"main,omitempty"`
+	Mgmt       MgmtConfig       `json:"mgmt,omitempty"`
+	Amqp       AmqpConfig       `json:"amqp,omitempty"`
+	Mqtt       MqttConfig       `json:"mqtt,omitempty"`
+	Clustering ClusteringConfig `json:"clustering,omitempty"`
 }
 
 // LavinMQStatus defines the observed state of LavinMQ
