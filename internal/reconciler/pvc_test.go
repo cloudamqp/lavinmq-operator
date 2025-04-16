@@ -9,6 +9,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+	storagev1 "k8s.io/api/storage/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -42,8 +43,10 @@ var _ = Describe("PVCReconciler", func() {
 						},
 					},
 				},
+				Replicas: 1,
 			},
 		}
+
 		rc = &reconciler.PVCReconciler{
 			ResourceReconciler: &reconciler.ResourceReconciler{
 				Instance: instance,
@@ -66,7 +69,14 @@ var _ = Describe("PVCReconciler", func() {
 					Namespace: instance.Namespace,
 				},
 			}
-			err := k8sClient.Delete(context.Background(), pvc)
+
+			k8sClient.Get(context.Background(), types.NamespacedName{Name: fmt.Sprintf("data-%s-%d", instance.Name, i), Namespace: instance.Namespace}, pvc)
+			By("Removing PVC finalizer to allow deletion")
+			pvc.Finalizers = nil
+			err := k8sClient.Update(context.Background(), pvc)
+			Expect(err).NotTo(HaveOccurred())
+
+			err = k8sClient.Delete(context.Background(), pvc)
 			if err != nil {
 				// Only fail if error is not "not found"
 				Expect(apierrors.IsNotFound(err)).To(BeTrue())
@@ -74,16 +84,12 @@ var _ = Describe("PVCReconciler", func() {
 		}
 	})
 
-	Describe("Build", func() {
+	When("using default values", func() {
 		It("should create a PVC with the correct template", func() {
-			err := k8sClient.Update(context.Background(), instance)
-			Expect(err).NotTo(HaveOccurred())
-
 			rc.Reconcile(context.Background())
 
 			pvc := &corev1.PersistentVolumeClaim{}
-			err = k8sClient.Get(context.Background(), types.NamespacedName{Name: fmt.Sprintf("data-%s-0", instance.Name), Namespace: instance.Namespace}, pvc)
-			Expect(err).NotTo(HaveOccurred())
+			Expect(k8sClient.Get(context.Background(), types.NamespacedName{Name: fmt.Sprintf("data-%s-0", instance.Name), Namespace: instance.Namespace}, pvc)).To(Succeed())
 			Expect(pvc).NotTo(BeNil())
 
 			Expect(pvc.Name).To(Equal(fmt.Sprintf("data-%s-0", instance.Name)))
@@ -93,61 +99,99 @@ var _ = Describe("PVCReconciler", func() {
 		})
 	})
 
-	Describe("Diff", func() {
-		When("there are no changes", func() {
-			It("should return no diff and no error", func() {
-				err := k8sClient.Update(context.Background(), instance)
-				Expect(err).NotTo(HaveOccurred())
+	When("there are no changes", func() {
+		It("should not make any changes to the PVC", func() {
+			By("Reconciling the instance setup")
+			_, err := rc.Reconcile(context.Background())
+			Expect(err).NotTo(HaveOccurred())
 
-				_, err = rc.Reconcile(context.Background())
-				Expect(err).NotTo(HaveOccurred())
-				pvc := &corev1.PersistentVolumeClaim{}
-				err = k8sClient.Get(context.Background(), types.NamespacedName{Name: fmt.Sprintf("data-%s-0", instance.Name), Namespace: instance.Namespace}, pvc)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(pvc.Spec.Resources.Requests.Storage().Cmp(*instance.Spec.DataVolumeClaimSpec.Resources.Requests.Storage())).To(Equal(0))
-			})
+			By("Checking the PVC")
+			pvc := &corev1.PersistentVolumeClaim{}
+			err = k8sClient.Get(context.Background(), types.NamespacedName{Name: fmt.Sprintf("data-%s-0", instance.Name), Namespace: instance.Namespace}, pvc)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(pvc.Spec.Resources.Requests.Storage().Cmp(*instance.Spec.DataVolumeClaimSpec.Resources.Requests.Storage())).To(Equal(0))
+		})
+	})
+
+	When("storage size increases", func() {
+		var storageClass *storagev1.StorageClass
+
+		BeforeEach(func() {
+			storageClass = createStorageClass()
+			instance.Spec.DataVolumeClaimSpec.StorageClassName = &[]string{"default-sc"}[0]
+			err := k8sClient.Update(context.Background(), instance)
+			Expect(err).NotTo(HaveOccurred())
 		})
 
-		When("storage size changes", func() {
-			When("storage size increases", func() {
-				It("should allow the change and return a diff", func() {
-					Skip("skipping for now while expanding disks is not supported in test env")
-					_, err := rc.Reconcile(context.Background())
-					Expect(err).NotTo(HaveOccurred())
-					instance.Spec.DataVolumeClaimSpec.Resources.Requests[corev1.ResourceStorage] = resource.MustParse("20Gi")
+		AfterEach(func() {
+			Expect(k8sClient.Delete(context.Background(), storageClass)).To(Succeed())
+		})
 
-					pvc := &corev1.PersistentVolumeClaim{}
-					err = k8sClient.Get(context.Background(), types.NamespacedName{Name: fmt.Sprintf("data-%s-0", instance.Name), Namespace: instance.Namespace}, pvc)
+		It("should increase the PVC size", func() {
+			By("Reconciling the instance setup")
+			_, err := rc.Reconcile(context.Background())
+			Expect(err).NotTo(HaveOccurred())
 
-					fmt.Println(pvc)
+			By("Setting the PVC to bound")
+			pvc := &corev1.PersistentVolumeClaim{}
+			Expect(k8sClient.Get(context.Background(), types.NamespacedName{Name: fmt.Sprintf("data-%s-0", instance.Name), Namespace: instance.Namespace}, pvc)).To(Succeed())
+			pvc.Status.Phase = corev1.ClaimBound
+			Expect(k8sClient.Status().Update(context.Background(), pvc)).To(Succeed())
 
-					err = k8sClient.Update(context.Background(), instance)
-					Expect(err).NotTo(HaveOccurred())
+			By("Updating the storage size")
+			instance.Spec.DataVolumeClaimSpec.Resources.Requests[corev1.ResourceStorage] = resource.MustParse("20Gi")
+			err = k8sClient.Update(context.Background(), instance)
+			Expect(err).NotTo(HaveOccurred())
 
-					_, err = rc.Reconcile(context.Background())
-					Expect(err).NotTo(HaveOccurred())
+			By("Reconciling the updated instance")
+			_, err = rc.Reconcile(context.Background())
+			Expect(err).NotTo(HaveOccurred())
 
-					Expect(err).NotTo(HaveOccurred())
+			Expect(err).NotTo(HaveOccurred())
 
-					pvc = &corev1.PersistentVolumeClaim{}
-					err = k8sClient.Get(context.Background(), types.NamespacedName{Name: fmt.Sprintf("data-%s-0", instance.Name), Namespace: instance.Namespace}, pvc)
-					Expect(err).NotTo(HaveOccurred())
-					Expect(pvc.Spec.Resources.Requests.Storage().Cmp(*instance.Spec.DataVolumeClaimSpec.Resources.Requests.Storage())).To(Equal(0))
-				})
-			})
+			pvc = &corev1.PersistentVolumeClaim{}
+			err = k8sClient.Get(context.Background(), types.NamespacedName{Name: fmt.Sprintf("data-%s-0", instance.Name), Namespace: instance.Namespace}, pvc)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(pvc.Spec.Resources.Requests.Storage().Cmp(*instance.Spec.DataVolumeClaimSpec.Resources.Requests.Storage())).To(Equal(0))
+		})
+	})
 
-			When("storage size decreases", func() {
-				It("should return an error", func() {
-					instance.Spec.DataVolumeClaimSpec.Resources.Requests[corev1.ResourceStorage] = resource.MustParse("5Gi")
+	When("storage size decreases", func() {
+		It("should not allow the change and return an error", func() {
+			By("Reconciling the setup phase")
+			_, err := rc.Reconcile(context.Background())
+			Expect(err).NotTo(HaveOccurred())
 
-					err := k8sClient.Update(context.Background(), instance)
-					Expect(err).NotTo(HaveOccurred())
+			By("Updating the storage size")
+			instance.Spec.DataVolumeClaimSpec.Resources.Requests[corev1.ResourceStorage] = resource.MustParse("5Gi")
 
-					_, err = rc.Reconcile(context.Background())
-					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(ContainSubstring("volume size decreased, not supported"))
-				})
-			})
+			err = k8sClient.Update(context.Background(), instance)
+			Expect(err).NotTo(HaveOccurred())
+
+			By("Reconciling the updated instance")
+			_, err = rc.Reconcile(context.Background())
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("volume size decreased, not supported"))
 		})
 	})
 })
+
+func createStorageClass() *storagev1.StorageClass {
+	storageClass := &storagev1.StorageClass{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "default-sc",
+		},
+		Parameters:  map[string]string{},
+		Provisioner: "k8s.io/dummy-test",
+		ReclaimPolicy: &[]corev1.PersistentVolumeReclaimPolicy{
+			corev1.PersistentVolumeReclaimRetain,
+		}[0],
+		VolumeBindingMode: &[]storagev1.VolumeBindingMode{
+			storagev1.VolumeBindingWaitForFirstConsumer,
+		}[0],
+		AllowVolumeExpansion: &[]bool{true}[0],
+	}
+
+	Expect(k8sClient.Create(context.Background(), storageClass)).To(Succeed())
+	return storageClass
+}
