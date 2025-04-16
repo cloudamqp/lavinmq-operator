@@ -181,7 +181,7 @@ func (b *StatefulSetReconciler) portsFromSpec() []corev1.ContainerPort {
 	if b.Instance.Spec.Config.Mqtt.TlsPort != 0 {
 		ports = appendContainerPort(ports, b.Instance.Spec.Config.Mqtt.TlsPort, "mqtts")
 	}
-	fmt.Printf("Ports: %v\n", ports)
+
 	return ports
 }
 
