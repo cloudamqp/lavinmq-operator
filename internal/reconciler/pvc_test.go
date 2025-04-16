@@ -62,7 +62,7 @@ var _ = Describe("PVCReconciler", func() {
 
 	AfterEach(func() {
 		Expect(k8sClient.Delete(context.Background(), instance)).To(Succeed())
-		for i := 0; i < int(instance.Spec.Replicas); i++ {
+		for i := range int(instance.Spec.Replicas) {
 			pvc := &corev1.PersistentVolumeClaim{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      fmt.Sprintf("data-%s-%d", instance.Name, i),
