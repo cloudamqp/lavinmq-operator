@@ -44,96 +44,148 @@ spec:
                   amqp:
                     properties:
                       channel_max:
+                        description: ChannelMax is the maximum number of channels
+                          per connection.
                         format: int64
                         type: integer
                       frame_max:
+                        description: FrameMax is the maximum size of an AMQP frame
+                          in bytes.
                         format: int64
                         type: integer
                       heartbeat:
+                        description: Heartbeat is the interval in seconds for AMQP
+                          heartbeats.
                         format: int64
                         type: integer
                       max_message_size:
+                        description: MaxMessageSize is the maximum size of a message
+                          in bytes.
                         format: int64
                         type: integer
                       port:
+                        description: Port is the port for the AMQP interface.
                         format: int64
                         type: integer
                       tls_port:
+                        description: TlsPort is the TLS port for the AMQP interface.
                         format: int64
                         type: integer
                     type: object
                   clustering:
                     properties:
                       max_unsynced_actions:
+                        description: MaxUnsyncedActions is the maximum number of unsynced
+                          actions allowed in the cluster.
                         format: int64
                         type: integer
                     type: object
                   main:
                     properties:
                       consumer_timeout:
+                        description: ConsumerTimeout is the timeout for consumers
+                          in milliseconds.
                         format: int64
                         type: integer
                       default_consumer_prefetch:
+                        description: DefaultConsumerPrefetch is the default prefetch
+                          value for consumers if not set by the consumer.
                         format: int64
                         type: integer
                       default_password:
+                        description: |-
+                          DefaultPassword is the hashed password for the default user.
+                          Use lavinmqctl hash_password or /api/auth/hash_password to generate the password hash.
                         type: string
                       default_user:
+                        description: DefaultUser is the default user.
                         type: string
                       free_disk_min:
+                        description: FreeDiskMin is the minimum value of free disk
+                          space in bytes before LavinMQ starts to control flow.
                         format: int64
                         type: integer
                       free_disk_warn:
+                        description: FreeDiskWarn is the minimum value of free disk
+                          space in bytes before LavinMQ warns about low disk space.
                         format: int64
                         type: integer
                       log_exchange:
+                        description: LogExchange enables the log exchange.
                         type: boolean
                       log_level:
+                        description: |-
+                          LogLevel controls how detailed the log should be.
+                          The level can be one of: none, fatal, error, warn, info, debug.
                         type: string
                       max_deleted_definitions:
+                        description: MaxDeletedDefinitions is the number of deleted
+                          queues, unbinds, etc., that compacts the definitions file.
                         format: int64
                         type: integer
                       segment_size:
+                        description: SegmentSize is the size of segment files in bytes.
                         format: int64
                         type: integer
                       set_timestamp:
+                        description: SetTimestamp is a boolean value for setting the
+                          timestamp property.
                         type: boolean
                       socket_buffer_size:
+                        description: SocketBufferSize is the socket buffer size in
+                          bytes.
                         format: int64
                         type: integer
                       stats_interval:
+                        description: StatsInterval is the statistics collection interval
+                          in milliseconds.
                         format: int64
                         type: integer
                       stats_log_size:
+                        description: StatsLogSize is the number of entries in the
+                          statistics log file before the oldest entry is removed.
                         format: int64
                         type: integer
                       tcp_keepalive:
+                        description: TcpKeepalive is the TCP keepalive settings as
+                          a tuple {idle, interval, probes/count}.
                         type: string
                       tcp_nodelay:
+                        description: TcpNodelay is a boolean value for disabling Nagle's
+                          algorithm and sending the data as soon as it's available.
                         type: boolean
                       tls_ciphers:
+                        description: TlsCiphers specifies the TLS ciphers to use.
                         type: string
                       tls_min_version:
+                        description: TlsMinVersion specifies the minimum TLS version
+                          to use.
                         type: string
                     type: object
                   mgmt:
                     properties:
                       port:
+                        description: Port is the port for the management interface.
                         format: int64
                         type: integer
                       tls_port:
+                        description: TlsPort is the TLS port for the management interface.
                         format: int64
                         type: integer
                     type: object
                   mqtt:
                     properties:
                       max_inflight_messages:
+                        description: MaxInflightMessages is the maximum number of
+                          in-flight messages per client.
                         format: int64
                         type: integer
                       port:
+                        description: Port is the port for the MQTT interface.
                         format: int64
                         type: integer
                       tls_port:
+                        description: TlsPort is the TLS port for the MQTT interface.
                         format: int64
                         type: integer
                     type: object

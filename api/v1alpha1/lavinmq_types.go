@@ -58,96 +58,137 @@ type LavinMQSpec struct {
 }
 
 type MainConfig struct {
+	// ConsumerTimeout is the timeout for consumers in milliseconds.
 	// +optional
 	ConsumerTimeout uint64 `json:"consumer_timeout,omitempty"`
 
+	// DefaultConsumerPrefetch is the default prefetch value for consumers if not set by the consumer.
 	// +optional
 	DefaultConsumerPrefetch uint64 `json:"default_consumer_prefetch,omitempty"`
 
+	// DefaultPassword is the hashed password for the default user.
+	// Use lavinmqctl hash_password or /api/auth/hash_password to generate the password hash.
 	// +optional
 	DefaultPassword string `json:"default_password,omitempty"`
 
+	// DefaultUser is the default user.
 	// +optional
 	DefaultUser string `json:"default_user,omitempty"`
 
+	// FreeDiskMin is the minimum value of free disk space in bytes before LavinMQ starts to control flow.
 	// +optional
 	FreeDiskMin uint64 `json:"free_disk_min,omitempty"`
 
+	// FreeDiskWarn is the minimum value of free disk space in bytes before LavinMQ warns about low disk space.
 	// +optional
 	FreeDiskWarn uint64 `json:"free_disk_warn,omitempty"`
 
+	// LogExchange enables the log exchange.
 	// +optional
 	LogExchange bool `json:"log_exchange,omitempty"`
 
+	// LogLevel controls how detailed the log should be.
+	// The level can be one of: none, fatal, error, warn, info, debug.
 	// +optional
 	LogLevel string `json:"log_level,omitempty"`
 
+	// MaxDeletedDefinitions is the number of deleted queues, unbinds, etc., that compacts the definitions file.
 	// +optional
 	MaxDeletedDefinitions uint64 `json:"max_deleted_definitions,omitempty"`
 
+	// SegmentSize is the size of segment files in bytes.
 	// +optional
 	SegmentSize uint64 `json:"segment_size,omitempty"`
 
+	// SetTimestamp is a boolean value for setting the timestamp property.
 	// +optional
 	SetTimestamp bool `json:"set_timestamp,omitempty"`
 
+	// SocketBufferSize is the socket buffer size in bytes.
 	// +optional
 	SocketBufferSize uint64 `json:"socket_buffer_size,omitempty"`
 
+	// StatsInterval is the statistics collection interval in milliseconds.
 	// +optional
 	StatsInterval uint64 `json:"stats_interval,omitempty"`
 
+	// StatsLogSize is the number of entries in the statistics log file before the oldest entry is removed.
 	// +optional
 	StatsLogSize uint64 `json:"stats_log_size,omitempty"`
 
+	// TcpKeepalive is the TCP keepalive settings as a tuple {idle, interval, probes/count}.
 	// +optional
 	TcpKeepalive string `json:"tcp_keepalive,omitempty"`
 
+	// TcpNodelay is a boolean value for disabling Nagle's algorithm and sending the data as soon as it's available.
 	// +optional
 	TcpNodelay bool `json:"tcp_nodelay,omitempty"`
 
+	// TlsCiphers specifies the TLS ciphers to use.
 	// +optional
 	TlsCiphers string `json:"tls_ciphers,omitempty"`
 
+	// TlsMinVersion specifies the minimum TLS version to use.
 	// +optional
 	TlsMinVersion string `json:"tls_min_version,omitempty"`
 }
+
 type MgmtConfig struct {
+	// Port is the port for the management interface.
 	// +optional
 	Port uint64 `json:"port,omitempty"`
 
+	// TlsPort is the TLS port for the management interface.
 	// +optional
 	TlsPort uint64 `json:"tls_port,omitempty"`
 }
 
 type AmqpConfig struct {
+	// ChannelMax is the maximum number of channels per connection.
 	// +optional
 	ChannelMax uint64 `json:"channel_max,omitempty"`
+
+	// FrameMax is the maximum size of an AMQP frame in bytes.
 	// +optional
 	FrameMax uint64 `json:"frame_max,omitempty"`
+
+	// Heartbeat is the interval in seconds for AMQP heartbeats.
 	// +optional
 	Heartbeat uint64 `json:"heartbeat,omitempty"`
+
+	// MaxMessageSize is the maximum size of a message in bytes.
 	// +optional
 	MaxMessageSize uint64 `json:"max_message_size,omitempty"`
+
+	// Port is the port for the AMQP interface.
 	// +optional
 	Port uint64 `json:"port,omitempty"`
+
+	// TlsPort is the TLS port for the AMQP interface.
 	// +optional
 	TlsPort uint64 `json:"tls_port,omitempty"`
 }
 
 type MqttConfig struct {
+	// MaxInflightMessages is the maximum number of in-flight messages per client.
 	// +optional
 	MaxInflightMessages uint64 `json:"max_inflight_messages,omitempty"`
+
+	// Port is the port for the MQTT interface.
 	// +optional
 	Port uint64 `json:"port,omitempty"`
+
+	// TlsPort is the TLS port for the MQTT interface.
 	// +optional
 	TlsPort uint64 `json:"tls_port,omitempty"`
 }
 
 type ClusteringConfig struct {
+	// MaxUnsyncedActions is the maximum number of unsynced actions allowed in the cluster.
 	// +optional
 	MaxUnsyncedActions uint64 `json:"max_unsynced_actions,omitempty"`
 }
+
 type LavinMQConfig struct {
 	Main       MainConfig       `json:"main,omitempty"`
 	Mgmt       MgmtConfig       `json:"mgmt,omitempty"`
