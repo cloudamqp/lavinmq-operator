@@ -147,8 +147,6 @@ var _ = Describe("PVCReconciler", func() {
 			_, err = rc.Reconcile(context.Background())
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(err).NotTo(HaveOccurred())
-
 			pvc = &corev1.PersistentVolumeClaim{}
 			err = k8sClient.Get(context.Background(), types.NamespacedName{Name: fmt.Sprintf("data-%s-0", instance.Name), Namespace: instance.Namespace}, pvc)
 			Expect(err).NotTo(HaveOccurred())
