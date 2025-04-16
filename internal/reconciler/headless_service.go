@@ -48,21 +48,37 @@ func (b *HeadlessServiceReconciler) Reconcile(ctx context.Context) (ctrl.Result,
 func (b *HeadlessServiceReconciler) newObject() *corev1.Service {
 	servicePorts := []corev1.ServicePort{}
 	if b.Instance.Spec.EtcdEndpoints != nil {
-		servicePorts = append(servicePorts, corev1.ServicePort{
-			Name:       "clustering",
-			Port:       5679,
-			TargetPort: intstr.FromInt(5679),
-			Protocol:   "TCP",
-		})
+		servicePorts = appendServicePorts(servicePorts, 5679, "clustering")
 	}
 
-	for _, port := range b.Instance.Spec.Ports {
-		servicePorts = append(servicePorts, corev1.ServicePort{
-			Name:       port.Name,
-			Port:       port.ContainerPort,
-			TargetPort: intstr.FromInt(int(port.ContainerPort)),
-			Protocol:   "TCP",
-		})
+	if b.Instance.Spec.Config.Mgmt.Port == 0 {
+		servicePorts = appendServicePorts(servicePorts, 15672, "http")
+	} else {
+		servicePorts = appendServicePorts(servicePorts, b.Instance.Spec.Config.Mgmt.Port, "http")
+	}
+
+	if b.Instance.Spec.Config.Mgmt.TlsPort != 0 {
+		servicePorts = appendServicePorts(servicePorts, b.Instance.Spec.Config.Mgmt.TlsPort, "https")
+	}
+
+	if b.Instance.Spec.Config.Amqp.Port == 0 {
+		servicePorts = appendServicePorts(servicePorts, 5672, "amqp")
+	} else {
+		servicePorts = appendServicePorts(servicePorts, b.Instance.Spec.Config.Amqp.Port, "amqp")
+	}
+
+	if b.Instance.Spec.Config.Amqp.TlsPort != 0 {
+		servicePorts = appendServicePorts(servicePorts, b.Instance.Spec.Config.Amqp.TlsPort, "amqps")
+	}
+
+	if b.Instance.Spec.Config.Mqtt.Port == 0 {
+		servicePorts = appendServicePorts(servicePorts, 1883, "mqtt")
+	} else {
+		servicePorts = appendServicePorts(servicePorts, b.Instance.Spec.Config.Mqtt.Port, "mqtt")
+	}
+
+	if b.Instance.Spec.Config.Mqtt.TlsPort != 0 {
+		servicePorts = appendServicePorts(servicePorts, b.Instance.Spec.Config.Mqtt.TlsPort, "mqtts")
 	}
 
 	service := &corev1.Service{
@@ -79,6 +95,16 @@ func (b *HeadlessServiceReconciler) newObject() *corev1.Service {
 	}
 
 	return service
+}
+
+func appendServicePorts(servicePorts []corev1.ServicePort, port int32, name string) []corev1.ServicePort {
+	servicePorts = append(servicePorts, corev1.ServicePort{
+		Name:       name,
+		Port:       port,
+		TargetPort: intstr.FromInt(int(port)),
+		Protocol:   "TCP",
+	})
+	return servicePorts
 }
 
 func (b *HeadlessServiceReconciler) updateFields(ctx context.Context, service *corev1.Service) {

@@ -111,17 +111,6 @@ var _ = Describe("LavinMQ Controller", func() {
 				Expect(k8sClient.Create(ctx, lavinmq)).To(Succeed())
 			})
 
-			It("should verify the default container ports", func() {
-				resource := &cloudamqpcomv1alpha1.LavinMQ{}
-				err := k8sClient.Get(ctx, typeNamespacedName, resource)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(resource.Spec.Ports).To(Equal([]corev1.ContainerPort{
-					{ContainerPort: 5672, Name: "amqp", Protocol: "TCP"},
-					{ContainerPort: 15672, Name: "http", Protocol: "TCP"},
-					{ContainerPort: 1883, Name: "mqtt", Protocol: "TCP"},
-				}))
-			})
-
 			It("should verify the default image", func() {
 				resource := &cloudamqpcomv1alpha1.LavinMQ{}
 				err := k8sClient.Get(ctx, typeNamespacedName, resource)
@@ -137,11 +126,9 @@ var _ = Describe("LavinMQ Controller", func() {
 			})
 		})
 
-		Context("When creating a lavinmq cluster with custom ports", func() {
+		Context("When creating a lavinmq cluster with custom port", func() {
 			BeforeEach(func() {
-				lavinmq.Spec.Ports = []corev1.ContainerPort{
-					{ContainerPort: 1337, Name: "amqp", Protocol: "TCP"},
-				}
+				lavinmq.Spec.Config.Amqp.Port = 1337
 				Expect(k8sClient.Create(ctx, lavinmq)).To(Succeed())
 			})
 
@@ -149,9 +136,7 @@ var _ = Describe("LavinMQ Controller", func() {
 				resource := &cloudamqpcomv1alpha1.LavinMQ{}
 				err := k8sClient.Get(ctx, typeNamespacedName, resource)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(resource.Spec.Ports).To(Equal([]corev1.ContainerPort{
-					{ContainerPort: 1337, Name: "amqp", Protocol: "TCP"},
-				}))
+				Expect(resource.Spec.Config.Amqp.Port).To(Equal(int32(1337)))
 			})
 		})
 
@@ -191,9 +176,7 @@ var _ = Describe("LavinMQ Controller", func() {
 				})
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).To(Equal(reconcile.Result{}))
-				lavinmq.Spec.Ports = []corev1.ContainerPort{
-					{ContainerPort: 1337, Name: "amqp", Protocol: "TCP"},
-				}
+				lavinmq.Spec.Config.Amqp.Port = 1337
 				Expect(k8sClient.Update(ctx, lavinmq)).To(Succeed())
 			})
 
@@ -207,8 +190,11 @@ var _ = Describe("LavinMQ Controller", func() {
 				resource := &appsv1.StatefulSet{}
 				err = k8sClient.Get(ctx, typeNamespacedName, resource)
 				Expect(err).NotTo(HaveOccurred())
+
 				Expect(resource.Spec.Template.Spec.Containers[0].Ports).To(Equal([]corev1.ContainerPort{
+					{ContainerPort: 15672, Name: "http", Protocol: "TCP"},
 					{ContainerPort: 1337, Name: "amqp", Protocol: "TCP"},
+					{ContainerPort: 1883, Name: "mqtt", Protocol: "TCP"},
 				}))
 			})
 		})

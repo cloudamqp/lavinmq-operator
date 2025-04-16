@@ -39,10 +39,6 @@ type LavinMQSpec struct {
 	// +optional
 	Replicas int32 `json:"replicas,omitempty"`
 
-	// +kubebuilder:default={{containerPort:5672,name:"amqp"},{containerPort:15672,name:"http"},{containerPort:1883,name:"mqtt"}}
-	// +optional
-	Ports []corev1.ContainerPort `json:"ports,omitempty"`
-
 	// Will override the accessmode and force it to ReadWriteOnce
 	// +required
 	DataVolumeClaimSpec corev1.PersistentVolumeClaimSpec `json:"dataVolumeClaim"`
@@ -136,11 +132,11 @@ type MainConfig struct {
 type MgmtConfig struct {
 	// Port is the port for the management interface.
 	// +optional
-	Port uint64 `json:"port,omitempty"`
+	Port int32 `json:"port,omitempty"`
 
 	// TlsPort is the TLS port for the management interface.
 	// +optional
-	TlsPort uint64 `json:"tls_port,omitempty"`
+	TlsPort int32 `json:"tls_port,omitempty"`
 }
 
 type AmqpConfig struct {
@@ -162,11 +158,11 @@ type AmqpConfig struct {
 
 	// Port is the port for the AMQP interface.
 	// +optional
-	Port uint64 `json:"port,omitempty"`
+	Port int32 `json:"port,omitempty"`
 
 	// TlsPort is the TLS port for the AMQP interface.
 	// +optional
-	TlsPort uint64 `json:"tls_port,omitempty"`
+	TlsPort int32 `json:"tls_port,omitempty"`
 }
 
 type MqttConfig struct {
@@ -176,11 +172,11 @@ type MqttConfig struct {
 
 	// Port is the port for the MQTT interface.
 	// +optional
-	Port uint64 `json:"port,omitempty"`
+	Port int32 `json:"port,omitempty"`
 
 	// TlsPort is the TLS port for the MQTT interface.
 	// +optional
-	TlsPort uint64 `json:"tls_port,omitempty"`
+	TlsPort int32 `json:"tls_port,omitempty"`
 }
 
 type ClusteringConfig struct {

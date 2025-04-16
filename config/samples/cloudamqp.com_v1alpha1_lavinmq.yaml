@@ -9,15 +9,6 @@ metadata:
 spec:
   image: cloudamqp/lavinmq:2.2.0
   replicas: 1
-  ports:
-    - containerPort: 15672
-      name: http
-    - containerPort: 5672
-      name: amqp
-    - containerPort: 15671
-      name: https
-    - containerPort: 5671
-      name: amqps
   etcdEndpoints:
     - etcd-cluster-0.etcd-cluster.default.svc.cluster.local:2379
     - etcd-cluster-1.etcd-cluster.default.svc.cluster.local:2379
@@ -32,6 +23,15 @@ spec:
         storage: 3Gi
   config:
     main:
-      - key: consumer_timeout
-        val: 20000
-
+      consumer_timeout: 20000
+      default_consumer_prefetch: 100
+    mgmt:
+      port: 15672
+    amqp:
+      port: 5672
+      channel_max: 100
+    mqtt:
+      max_inflight_messages: 100
+      port: 1883
+    clustering:
+      max_unsynced_actions: 8192

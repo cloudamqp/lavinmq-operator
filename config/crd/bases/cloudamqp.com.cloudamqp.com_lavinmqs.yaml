@@ -65,11 +65,11 @@ spec:
                         type: integer
                       port:
                         description: Port is the port for the AMQP interface.
-                        format: int64
+                        format: int32
                         type: integer
                       tls_port:
                         description: TlsPort is the TLS port for the AMQP interface.
-                        format: int64
+                        format: int32
                         type: integer
                     type: object
                   clustering:
@@ -166,11 +166,11 @@ spec:
                     properties:
                       port:
                         description: Port is the port for the management interface.
-                        format: int64
+                        format: int32
                         type: integer
                       tls_port:
                         description: TlsPort is the TLS port for the management interface.
-                        format: int64
+                        format: int32
                         type: integer
                     type: object
                   mqtt:
@@ -182,11 +182,11 @@ spec:
                         type: integer
                       port:
                         description: Port is the port for the MQTT interface.
-                        format: int64
+                        format: int32
                         type: integer
                       tls_port:
                         description: TlsPort is the TLS port for the MQTT interface.
-                        format: int64
+                        format: int32
                         type: integer
                     type: object
                 type: object
@@ -394,51 +394,6 @@ spec:
               image:
                 default: cloudamqp/lavinmq:2.2.0
                 type: string
-              ports:
-                default:
-                - containerPort: 5672
-                  name: amqp
-                - containerPort: 15672
-                  name: http
-                - containerPort: 1883
-                  name: mqtt
-                items:
-                  description: ContainerPort represents a network port in a single
-                    container.
-                  properties:
-                    containerPort:
-                      description: |-
-                        Number of port to expose on the pod's IP address.
-                        This must be a valid port number, 0 < x < 65536.
-                      format: int32
-                      type: integer
-                    hostIP:
-                      description: What host IP to bind the external port to.
-                      type: string
-                    hostPort:
-                      description: |-
-                        Number of port to expose on the host.
-                        If specified, this must be a valid port number, 0 < x < 65536.
-                        If HostNetwork is specified, this must match ContainerPort.
-                        Most containers do not need this.
-                      format: int32
-                      type: integer
-                    name:
-                      description: |-
-                        If specified, this must be an IANA_SVC_NAME and unique within the pod. Each
-                        named port in a pod must have a unique name. Name for the port that can be
-                        referred to by services.
-                      type: string
-                    protocol:
-                      default: TCP
-                      description: |-
-                        Protocol for port. Must be UDP, TCP, or SCTP.
-                        Defaults to "TCP".
-                      type: string
-                  required:
-                  - containerPort
-                  type: object
-                type: array
               replicas:
                 default: 1
                 format: int32

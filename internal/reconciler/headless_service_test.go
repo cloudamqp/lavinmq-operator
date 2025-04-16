@@ -63,25 +63,11 @@ var _ = Describe("HeadlessServiceReconciler", func() {
 
 	Context("When providing custom ports", func() {
 		BeforeEach(func() {
-			instance.Spec.Ports = []corev1.ContainerPort{
-				{
-					Name:          "amqp",
-					ContainerPort: 1111,
-				},
-				{
-					Name:          "http",
-					ContainerPort: 2222,
-				},
-				{
-					Name:          "amqps",
-					ContainerPort: 3333,
-				},
-				{
-					Name:          "https",
-					ContainerPort: 4444,
-				},
-			}
-
+			instance.Spec.Config.Amqp.Port = 1111
+			instance.Spec.Config.Mgmt.Port = 2222
+			instance.Spec.Config.Amqp.TlsPort = 3333
+			instance.Spec.Config.Mgmt.TlsPort = 4444
+			instance.Spec.Config.Mqtt.Port = 5555
 			Expect(k8sClient.Update(context.Background(), instance)).To(Succeed())
 		})
 
@@ -91,15 +77,27 @@ var _ = Describe("HeadlessServiceReconciler", func() {
 			service := &corev1.Service{}
 			err := k8sClient.Get(context.Background(), namespacedName, service)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(service.Spec.Ports).To(HaveLen(4))
-			Expect(service.Spec.Ports[0].Name).To(Equal("amqp"))
-			Expect(service.Spec.Ports[0].Port).To(Equal(int32(1111)))
-			Expect(service.Spec.Ports[1].Name).To(Equal("http"))
-			Expect(service.Spec.Ports[1].Port).To(Equal(int32(2222)))
-			Expect(service.Spec.Ports[2].Name).To(Equal("amqps"))
-			Expect(service.Spec.Ports[2].Port).To(Equal(int32(3333)))
-			Expect(service.Spec.Ports[3].Name).To(Equal("https"))
-			Expect(service.Spec.Ports[3].Port).To(Equal(int32(4444)))
+			Expect(service.Spec.Ports).To(HaveLen(5))
+			i := slices.IndexFunc(service.Spec.Ports, func(port corev1.ServicePort) bool {
+				return port.Name == "amqp"
+			})
+			Expect(service.Spec.Ports[i].Port).To(Equal(int32(1111)))
+			i = slices.IndexFunc(service.Spec.Ports, func(port corev1.ServicePort) bool {
+				return port.Name == "http"
+			})
+			Expect(service.Spec.Ports[i].Port).To(Equal(int32(2222)))
+			i = slices.IndexFunc(service.Spec.Ports, func(port corev1.ServicePort) bool {
+				return port.Name == "amqps"
+			})
+			Expect(service.Spec.Ports[i].Port).To(Equal(int32(3333)))
+			i = slices.IndexFunc(service.Spec.Ports, func(port corev1.ServicePort) bool {
+				return port.Name == "https"
+			})
+			Expect(service.Spec.Ports[i].Port).To(Equal(int32(4444)))
+			i = slices.IndexFunc(service.Spec.Ports, func(port corev1.ServicePort) bool {
+				return port.Name == "mqtt"
+			})
+			Expect(service.Spec.Ports[i].Port).To(Equal(int32(5555)))
 		})
 	})
 
@@ -126,44 +124,22 @@ var _ = Describe("HeadlessServiceReconciler", func() {
 
 	Context("When updating fields", func() {
 		BeforeEach(func() {
-			instance.Spec.Ports = []corev1.ContainerPort{
-				{
-					Name:          "amqp",
-					ContainerPort: 5672,
-				},
-			}
+			instance.Spec.Config.Amqp.Port = 5672
 			Expect(k8sClient.Update(context.Background(), instance)).To(Succeed())
 			rc.Reconcile(context.Background())
 		})
 
 		It("Should update ports when they change", func() {
-			instance.Spec.Ports = []corev1.ContainerPort{
-				{
-					Name:          "amqp",
-					ContainerPort: 1111,
-				},
-			}
+			instance.Spec.Config.Amqp.Port = 1111
 			Expect(k8sClient.Update(context.Background(), instance)).To(Succeed())
 			rc.Reconcile(context.Background())
 
 			service := &corev1.Service{}
 			Expect(k8sClient.Get(context.Background(), namespacedName, service)).To(Succeed())
-			Expect(service.Spec.Ports[0].Port).To(Equal(int32(1111)))
-		})
-
-		It("Should not update ports when they are the same", func() {
-			instance.Spec.Ports = []corev1.ContainerPort{
-				{
-					Name:          "amqp",
-					ContainerPort: 5672,
-				},
-			}
-			Expect(k8sClient.Update(context.Background(), instance)).To(Succeed())
-			rc.Reconcile(context.Background())
-
-			service := &corev1.Service{}
-			Expect(k8sClient.Get(context.Background(), namespacedName, service)).To(Succeed())
-			Expect(service.Spec.Ports[0].Port).To(Equal(int32(5672)))
+			i := slices.IndexFunc(service.Spec.Ports, func(port corev1.ServicePort) bool {
+				return port.Name == "amqp"
+			})
+			Expect(service.Spec.Ports[i].Port).To(Equal(int32(1111)))
 		})
 	})
 })

@@ -31,11 +31,8 @@ bind = 0.0.0.0
 
 [mqtt]
 bind = 0.0.0.0
-	`
 
-	clusteringConfig = `
 [clustering]
-enabled = true
 bind = 0.0.0.0
 port = 5679
 `
@@ -87,47 +84,36 @@ func (b *ConfigReconciler) newObject() (*corev1.ConfigMap, error) {
 	}
 	config := strings.Builder{}
 
-	mainConfig, err := b.GenerateMainConfig()
+	err := b.GenerateMainConfig()
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate main config: %w", err)
 	}
-	_, err = mainConfig.WriteTo(&config)
-	if err != nil {
-		return nil, fmt.Errorf("failed to write main config: %w", err)
-	}
 
-	amqpConfig, err := b.GenerateAmqpConfig()
+	err = b.GenerateAmqpConfig()
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate amqp config: %w", err)
 	}
-	_, err = amqpConfig.WriteTo(&config)
-	if err != nil {
-		return nil, fmt.Errorf("failed to write amqp config: %w", err)
-	}
 
-	mqttConfig, err := b.GenerateMqttConfig()
+	err = b.GenerateMqttConfig()
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate mqtt config: %w", err)
 	}
-	_, err = mqttConfig.WriteTo(&config)
-	if err != nil {
-		return nil, fmt.Errorf("failed to write mqtt config: %w", err)
-	}
 
-	mgmtConfig, err := b.GenerateMgmtConfig()
+	err = b.GenerateMgmtConfig()
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate mgmt config: %w", err)
 	}
-	_, err = mgmtConfig.WriteTo(&config)
-	if err != nil {
-		return nil, fmt.Errorf("failed to write mgmt config: %w", err)
-	}
 
-	clusterConfig, err := b.GenerateClusteringConfig()
+	err = b.GenerateClusteringConfig()
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate clustering config: %w", err)
 	}
-	_, err = clusterConfig.WriteTo(&config)
+
+	cfg, err := ini.Load([]byte(defaultConfig))
+	if err != nil {
+		return nil, fmt.Errorf("failed to load config: %w", err)
+	}
+	_, err = cfg.WriteTo(&config)
 	if err != nil {
 		return nil, fmt.Errorf("failed to write cluster config: %w", err)
 	}
@@ -136,159 +122,160 @@ func (b *ConfigReconciler) newObject() (*corev1.ConfigMap, error) {
 	return configMap, nil
 }
 
-func (b *ConfigReconciler) GenerateMainConfig() (*ini.File, error) {
+func (b *ConfigReconciler) GenerateMainConfig() error {
 	cfg, err := ini.Load([]byte(defaultConfig))
 	if err != nil {
-		return nil, fmt.Errorf("failed to load config: %w", err)
+		return fmt.Errorf("failed to load config: %w", err)
 	}
 
 	mainConfig := b.Instance.Spec.Config.Main
 
-	if &mainConfig.ConsumerTimeout != nil {
+	if mainConfig.ConsumerTimeout != 0 {
 		cfg.Section("main").Key("consumer_timeout").SetValue(fmt.Sprintf("%d", mainConfig.ConsumerTimeout))
 	}
-	if &mainConfig.DefaultConsumerPrefetch != nil {
+	if mainConfig.DefaultConsumerPrefetch != 0 {
 		cfg.Section("main").Key("default_consumer_prefetch").SetValue(fmt.Sprintf("%d", mainConfig.DefaultConsumerPrefetch))
 	}
-	if &mainConfig.DefaultPassword != nil {
+	if mainConfig.DefaultPassword != "" {
 		cfg.Section("main").Key("default_password").SetValue(mainConfig.DefaultPassword)
 	}
-	if &mainConfig.DefaultUser != nil {
+	if mainConfig.DefaultUser != "" {
 		cfg.Section("main").Key("default_user").SetValue(mainConfig.DefaultUser)
 	}
-	if &mainConfig.FreeDiskMin != nil {
+	if mainConfig.FreeDiskMin != 0 {
 		cfg.Section("main").Key("free_disk_min").SetValue(fmt.Sprintf("%d", mainConfig.FreeDiskMin))
 	}
-	if &mainConfig.FreeDiskWarn != nil {
+	if mainConfig.FreeDiskWarn != 0 {
 		cfg.Section("main").Key("free_disk_warn").SetValue(fmt.Sprintf("%d", mainConfig.FreeDiskWarn))
 	}
-	if &mainConfig.LogExchange != nil {
+	if mainConfig.LogExchange {
 		cfg.Section("main").Key("log_exchange").SetValue(fmt.Sprintf("%t", mainConfig.LogExchange))
 	}
-	if &mainConfig.LogLevel != nil {
+	if mainConfig.LogLevel != "" {
 		cfg.Section("main").Key("log_level").SetValue(mainConfig.LogLevel)
 	}
-	if &mainConfig.MaxDeletedDefinitions != nil {
+	if mainConfig.MaxDeletedDefinitions != 0 {
 		cfg.Section("main").Key("max_deleted_definitions").SetValue(fmt.Sprintf("%d", mainConfig.MaxDeletedDefinitions))
 	}
-	if &mainConfig.SegmentSize != nil {
+	if mainConfig.SegmentSize != 0 {
 		cfg.Section("main").Key("segment_size").SetValue(fmt.Sprintf("%d", mainConfig.SegmentSize))
 	}
-	if &mainConfig.SetTimestamp != nil {
+	if mainConfig.SetTimestamp {
 		cfg.Section("main").Key("set_timestamp").SetValue(fmt.Sprintf("%t", mainConfig.SetTimestamp))
 	}
-	if &mainConfig.SocketBufferSize != nil {
+	if mainConfig.SocketBufferSize != 0 {
 		cfg.Section("main").Key("socket_buffer_size").SetValue(fmt.Sprintf("%d", mainConfig.SocketBufferSize))
 	}
-	if &mainConfig.StatsInterval != nil {
+	if mainConfig.StatsInterval != 0 {
 		cfg.Section("main").Key("stats_interval").SetValue(fmt.Sprintf("%d", mainConfig.StatsInterval))
 	}
-	if &mainConfig.StatsLogSize != nil {
+	if mainConfig.StatsLogSize != 0 {
 		cfg.Section("main").Key("stats_log_size").SetValue(fmt.Sprintf("%d", mainConfig.StatsLogSize))
 	}
-	if &mainConfig.TcpKeepalive != nil {
+	if mainConfig.TcpKeepalive != "" {
 		cfg.Section("main").Key("tcp_keepalive").SetValue(mainConfig.TcpKeepalive)
 	}
-	if &mainConfig.TcpNodelay != nil {
+	if mainConfig.TcpNodelay {
 		cfg.Section("main").Key("tcp_nodelay").SetValue(fmt.Sprintf("%t", mainConfig.TcpNodelay))
 	}
-	if &mainConfig.TlsCiphers != nil {
+	if mainConfig.TlsCiphers != "" {
 		cfg.Section("main").Key("tls_ciphers").SetValue(mainConfig.TlsCiphers)
 	}
-	if &mainConfig.TlsMinVersion != nil {
+	if mainConfig.TlsMinVersion != "" {
 		cfg.Section("main").Key("tls_min_version").SetValue(mainConfig.TlsMinVersion)
 	}
 	if b.Instance.Spec.TlsSecret != nil {
 		cfg.Section("main").Key("tls_cert").SetValue(fmt.Sprintf("/etc/lavinmq/tls/%s", "tls.crt"))
 		cfg.Section("main").Key("tls_key").SetValue(fmt.Sprintf("/etc/lavinmq/tls/%s", "tls.key"))
 	}
-	return cfg, nil
+	return nil
 }
 
-func (b *ConfigReconciler) GenerateClusteringConfig() (*ini.File, error) {
-	cfg, err := ini.Load([]byte(clusteringConfig))
+func (b *ConfigReconciler) GenerateClusteringConfig() error {
+	cfg, err := ini.Load([]byte(defaultConfig))
 	if err != nil {
-		return nil, fmt.Errorf("failed to load config: %w", err)
+		return fmt.Errorf("failed to load config: %w", err)
 	}
-	cfg.Section("clustering").Key("etcd_prefix").SetValue(b.Instance.Name)
 
 	if b.Instance.Spec.EtcdEndpoints != nil {
+		cfg.Section("clustering").Key("etcd_prefix").SetValue(b.Instance.Name)
 		cfg.Section("clustering").Key("etcd_endpoints").SetValue(strings.Join(b.Instance.Spec.EtcdEndpoints, ","))
+		cfg.Section("clustering").Key("enabled").SetValue("true")
 	}
 
-	if &b.Instance.Spec.Config.Clustering.MaxUnsyncedActions != nil {
+	if b.Instance.Spec.Config.Clustering.MaxUnsyncedActions != 0 {
 		cfg.Section("clustering").Key("max_unsynced_actions").SetValue(fmt.Sprintf("%d", b.Instance.Spec.Config.Clustering.MaxUnsyncedActions))
 	}
 
-	return cfg, nil
+	return nil
 }
 
-func (b *ConfigReconciler) GenerateAmqpConfig() (*ini.File, error) {
+func (b *ConfigReconciler) GenerateAmqpConfig() error {
 	cfg, err := ini.Load([]byte(defaultConfig))
 	if err != nil {
-		return nil, fmt.Errorf("failed to load config: %w", err)
+		return fmt.Errorf("failed to load config: %w", err)
 	}
 
 	amqpConfig := b.Instance.Spec.Config.Amqp
 
-	if &amqpConfig.ChannelMax != nil {
+	if amqpConfig.ChannelMax != 0 {
 		cfg.Section("amqp").Key("channel_max").SetValue(fmt.Sprintf("%d", amqpConfig.ChannelMax))
 	}
-	if &amqpConfig.FrameMax != nil {
+	if amqpConfig.FrameMax != 0 {
 		cfg.Section("amqp").Key("frame_max").SetValue(fmt.Sprintf("%d", amqpConfig.FrameMax))
 	}
-	if &amqpConfig.Heartbeat != nil {
+	if amqpConfig.Heartbeat != 0 {
 		cfg.Section("amqp").Key("heartbeat").SetValue(fmt.Sprintf("%d", amqpConfig.Heartbeat))
 	}
-	if &amqpConfig.MaxMessageSize != nil {
+	if amqpConfig.MaxMessageSize != 0 {
 		cfg.Section("amqp").Key("max_message_size").SetValue(fmt.Sprintf("%d", amqpConfig.MaxMessageSize))
 	}
-	if &amqpConfig.Port != nil {
+	if amqpConfig.Port != 0 {
 		cfg.Section("amqp").Key("port").SetValue(fmt.Sprintf("%d", amqpConfig.Port))
 	}
-	if &amqpConfig.TlsPort != nil {
+	if amqpConfig.TlsPort != 0 {
 		cfg.Section("amqp").Key("tls_port").SetValue(fmt.Sprintf("%d", amqpConfig.TlsPort))
 	}
 
-	return cfg, nil
+	return nil
 }
 
-func (b *ConfigReconciler) GenerateMqttConfig() (*ini.File, error) {
+func (b *ConfigReconciler) GenerateMqttConfig() error {
 	cfg, err := ini.Load([]byte(defaultConfig))
 	if err != nil {
-		return nil, fmt.Errorf("failed to load config: %w", err)
+		return fmt.Errorf("failed to load config: %w", err)
 	}
 
 	mqttConfig := b.Instance.Spec.Config.Mqtt
 
-	if &mqttConfig.MaxInflightMessages != nil {
+	if mqttConfig.MaxInflightMessages != 0 {
 		cfg.Section("mqtt").Key("max_inflight_messages").SetValue(fmt.Sprintf("%d", mqttConfig.MaxInflightMessages))
 	}
-	if &mqttConfig.Port != nil {
+	if mqttConfig.Port != 0 {
 		cfg.Section("mqtt").Key("port").SetValue(fmt.Sprintf("%d", mqttConfig.Port))
 	}
-	if &mqttConfig.TlsPort != nil {
+	if mqttConfig.TlsPort != 0 {
 		cfg.Section("mqtt").Key("tls_port").SetValue(fmt.Sprintf("%d", mqttConfig.TlsPort))
 	}
 
-	return cfg, nil
+	return nil
 }
 
-func (b *ConfigReconciler) GenerateMgmtConfig() (*ini.File, error) {
+func (b *ConfigReconciler) GenerateMgmtConfig() error {
 	cfg, err := ini.Load([]byte(defaultConfig))
 	if err != nil {
-		return nil, fmt.Errorf("failed to load config: %w", err)
+		return fmt.Errorf("failed to load config: %w", err)
 	}
 
 	mgmtConfig := b.Instance.Spec.Config.Mgmt
-	if &mgmtConfig.Port != nil {
+	if mgmtConfig.Port != 0 {
 		cfg.Section("mgmt").Key("port").SetValue(fmt.Sprintf("%d", mgmtConfig.Port))
 	}
-	if &mgmtConfig.TlsPort != nil {
+	if mgmtConfig.TlsPort != 0 {
 		cfg.Section("mgmt").Key("tls_port").SetValue(fmt.Sprintf("%d", mgmtConfig.TlsPort))
 	}
 
-	return cfg, nil
+	return nil
 }
 
 func (b *ConfigReconciler) updateFields(ctx context.Context, configMap *corev1.ConfigMap) error {
