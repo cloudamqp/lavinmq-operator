@@ -130,7 +130,7 @@ type MainConfig struct {
 }
 
 type MgmtConfig struct {
-	// Port for the HTTP management interface.
+	// Port for the HTTP management interface. Set to 0 to disable.
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=65535
 	// +kubebuilder:default=15672
@@ -161,7 +161,7 @@ type AmqpConfig struct {
 	// +optional
 	MaxMessageSize uint64 `json:"max_message_size,omitempty"`
 
-	// Port for the AMQP interface.
+	// Port for the AMQP interface. Set to 0 to disable.
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=65535
 	// +kubebuilder:default=5672
@@ -180,7 +180,7 @@ type MqttConfig struct {
 	// +optional
 	MaxInflightMessages uint64 `json:"max_inflight_messages,omitempty"`
 
-	// Port for the MQTT interface.
+	// Port for the MQTT interface. Set to 0 to disable.
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=65535
 	// +kubebuilder:default=1883

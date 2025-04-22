@@ -61,7 +61,7 @@ spec:
                         type: integer
                       port:
                         default: 5672
-                        description: Port for the AMQP interface.
+                        description: Port for the AMQP interface. Set to 0 to disable.
                         format: int32
                         maximum: 65535
                         minimum: 0
@@ -163,7 +163,8 @@ spec:
                     properties:
                       port:
                         default: 15672
-                        description: Port for the HTTP management interface.
+                        description: Port for the HTTP management interface. Set to
+                          0 to disable.
                         format: int32
                         maximum: 65535
                         minimum: 0
@@ -183,7 +184,7 @@ spec:
                         type: integer
                       port:
                         default: 1883
-                        description: Port for the MQTT interface.
+                        description: Port for the MQTT interface. Set to 0 to disable.
                         format: int32
                         maximum: 65535
                         minimum: 0

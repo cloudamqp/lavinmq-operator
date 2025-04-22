@@ -152,9 +152,7 @@ func (b *StatefulSetReconciler) portsFromSpec() []corev1.ContainerPort {
 		ports = appendContainerPort(ports, 5679, "clustering")
 	}
 
-	if b.Instance.Spec.Config.Mgmt.Port == 0 {
-		ports = appendContainerPort(ports, 15672, "http")
-	} else {
+	if b.Instance.Spec.Config.Mgmt.Port != 0 {
 		ports = appendContainerPort(ports, b.Instance.Spec.Config.Mgmt.Port, "http")
 	}
 
@@ -162,9 +160,7 @@ func (b *StatefulSetReconciler) portsFromSpec() []corev1.ContainerPort {
 		ports = appendContainerPort(ports, b.Instance.Spec.Config.Mgmt.TlsPort, "https")
 	}
 
-	if b.Instance.Spec.Config.Amqp.Port == 0 {
-		ports = appendContainerPort(ports, 5672, "amqp")
-	} else {
+	if b.Instance.Spec.Config.Amqp.Port != 0 {
 		ports = appendContainerPort(ports, b.Instance.Spec.Config.Amqp.Port, "amqp")
 	}
 
@@ -172,9 +168,7 @@ func (b *StatefulSetReconciler) portsFromSpec() []corev1.ContainerPort {
 		ports = appendContainerPort(ports, b.Instance.Spec.Config.Amqp.TlsPort, "amqps")
 	}
 
-	if b.Instance.Spec.Config.Mqtt.Port == 0 {
-		ports = appendContainerPort(ports, 1883, "mqtt")
-	} else {
+	if b.Instance.Spec.Config.Mqtt.Port != 0 {
 		ports = appendContainerPort(ports, b.Instance.Spec.Config.Mqtt.Port, "mqtt")
 	}
 
