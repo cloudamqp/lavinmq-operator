@@ -83,36 +83,18 @@ func (b *ConfigReconciler) newObject() (*corev1.ConfigMap, error) {
 		Data: map[string]string{},
 	}
 	config := strings.Builder{}
-
-	err := b.GenerateMainConfig()
-	if err != nil {
-		return nil, fmt.Errorf("failed to generate main config: %w", err)
-	}
-
-	err = b.GenerateAmqpConfig()
-	if err != nil {
-		return nil, fmt.Errorf("failed to generate amqp config: %w", err)
-	}
-
-	err = b.GenerateMqttConfig()
-	if err != nil {
-		return nil, fmt.Errorf("failed to generate mqtt config: %w", err)
-	}
-
-	err = b.GenerateMgmtConfig()
-	if err != nil {
-		return nil, fmt.Errorf("failed to generate mgmt config: %w", err)
-	}
-
-	err = b.GenerateClusteringConfig()
-	if err != nil {
-		return nil, fmt.Errorf("failed to generate clustering config: %w", err)
-	}
-
 	cfg, err := ini.Load([]byte(defaultConfig))
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to load config: %w", err)
 	}
+
+	b.AppendMainConfig(cfg)
+	b.AppendAmqpConfig(cfg)
+	b.AppendMqttConfig(cfg)
+	b.AppendMgmtConfig(cfg)
+	b.AppendClusteringConfig(cfg)
+
 	_, err = cfg.WriteTo(&config)
 	if err != nil {
 		return nil, fmt.Errorf("failed to write cluster config: %w", err)
@@ -122,12 +104,7 @@ func (b *ConfigReconciler) newObject() (*corev1.ConfigMap, error) {
 	return configMap, nil
 }
 
-func (b *ConfigReconciler) GenerateMainConfig() error {
-	cfg, err := ini.Load([]byte(defaultConfig))
-	if err != nil {
-		return fmt.Errorf("failed to load config: %w", err)
-	}
-
+func (b *ConfigReconciler) AppendMainConfig(cfg *ini.File) {
 	mainConfig := b.Instance.Spec.Config.Main
 
 	if mainConfig.ConsumerTimeout != 0 {
@@ -188,14 +165,9 @@ func (b *ConfigReconciler) GenerateMainConfig() error {
 		cfg.Section("main").Key("tls_cert").SetValue(fmt.Sprintf("/etc/lavinmq/tls/%s", "tls.crt"))
 		cfg.Section("main").Key("tls_key").SetValue(fmt.Sprintf("/etc/lavinmq/tls/%s", "tls.key"))
 	}
-	return nil
 }
 
-func (b *ConfigReconciler) GenerateClusteringConfig() error {
-	cfg, err := ini.Load([]byte(defaultConfig))
-	if err != nil {
-		return fmt.Errorf("failed to load config: %w", err)
-	}
+func (b *ConfigReconciler) AppendClusteringConfig(cfg *ini.File) {
 
 	if b.Instance.Spec.EtcdEndpoints != nil {
 		cfg.Section("clustering").Key("etcd_prefix").SetValue(b.Instance.Name)
@@ -206,16 +178,9 @@ func (b *ConfigReconciler) GenerateClusteringConfig() error {
 	if b.Instance.Spec.Config.Clustering.MaxUnsyncedActions != 0 {
 		cfg.Section("clustering").Key("max_unsynced_actions").SetValue(fmt.Sprintf("%d", b.Instance.Spec.Config.Clustering.MaxUnsyncedActions))
 	}
-
-	return nil
 }
 
-func (b *ConfigReconciler) GenerateAmqpConfig() error {
-	cfg, err := ini.Load([]byte(defaultConfig))
-	if err != nil {
-		return fmt.Errorf("failed to load config: %w", err)
-	}
-
+func (b *ConfigReconciler) AppendAmqpConfig(cfg *ini.File) {
 	amqpConfig := b.Instance.Spec.Config.Amqp
 
 	if amqpConfig.ChannelMax != 0 {
@@ -230,52 +195,37 @@ func (b *ConfigReconciler) GenerateAmqpConfig() error {
 	if amqpConfig.MaxMessageSize != 0 {
 		cfg.Section("amqp").Key("max_message_size").SetValue(fmt.Sprintf("%d", amqpConfig.MaxMessageSize))
 	}
-	if amqpConfig.Port != 0 {
+	if amqpConfig.Port > 0 {
 		cfg.Section("amqp").Key("port").SetValue(fmt.Sprintf("%d", amqpConfig.Port))
 	}
 	if amqpConfig.TlsPort != 0 {
 		cfg.Section("amqp").Key("tls_port").SetValue(fmt.Sprintf("%d", amqpConfig.TlsPort))
 	}
-
-	return nil
 }
 
-func (b *ConfigReconciler) GenerateMqttConfig() error {
-	cfg, err := ini.Load([]byte(defaultConfig))
-	if err != nil {
-		return fmt.Errorf("failed to load config: %w", err)
-	}
-
+func (b *ConfigReconciler) AppendMqttConfig(cfg *ini.File) {
 	mqttConfig := b.Instance.Spec.Config.Mqtt
 
 	if mqttConfig.MaxInflightMessages != 0 {
 		cfg.Section("mqtt").Key("max_inflight_messages").SetValue(fmt.Sprintf("%d", mqttConfig.MaxInflightMessages))
 	}
-	if mqttConfig.Port != 0 {
+	if mqttConfig.Port > 0 {
 		cfg.Section("mqtt").Key("port").SetValue(fmt.Sprintf("%d", mqttConfig.Port))
 	}
 	if mqttConfig.TlsPort != 0 {
 		cfg.Section("mqtt").Key("tls_port").SetValue(fmt.Sprintf("%d", mqttConfig.TlsPort))
 	}
 
-	return nil
 }
 
-func (b *ConfigReconciler) GenerateMgmtConfig() error {
-	cfg, err := ini.Load([]byte(defaultConfig))
-	if err != nil {
-		return fmt.Errorf("failed to load config: %w", err)
-	}
-
+func (b *ConfigReconciler) AppendMgmtConfig(cfg *ini.File) {
 	mgmtConfig := b.Instance.Spec.Config.Mgmt
-	if mgmtConfig.Port != 0 {
+	if mgmtConfig.Port > 0 {
 		cfg.Section("mgmt").Key("port").SetValue(fmt.Sprintf("%d", mgmtConfig.Port))
 	}
 	if mgmtConfig.TlsPort != 0 {
 		cfg.Section("mgmt").Key("tls_port").SetValue(fmt.Sprintf("%d", mgmtConfig.TlsPort))
 	}
-
-	return nil
 }
 
 func (b *ConfigReconciler) updateFields(ctx context.Context, configMap *corev1.ConfigMap) error {

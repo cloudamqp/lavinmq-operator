@@ -51,7 +51,7 @@ func (b *HeadlessServiceReconciler) newObject() *corev1.Service {
 		servicePorts = appendServicePorts(servicePorts, 5679, "clustering")
 	}
 
-	if b.Instance.Spec.Config.Mgmt.Port != 0 {
+	if b.Instance.Spec.Config.Mgmt.Port > 0 {
 		servicePorts = appendServicePorts(servicePorts, b.Instance.Spec.Config.Mgmt.Port, "http")
 	}
 
@@ -59,7 +59,7 @@ func (b *HeadlessServiceReconciler) newObject() *corev1.Service {
 		servicePorts = appendServicePorts(servicePorts, b.Instance.Spec.Config.Mgmt.TlsPort, "https")
 	}
 
-	if b.Instance.Spec.Config.Amqp.Port != 0 {
+	if b.Instance.Spec.Config.Amqp.Port > 0 {
 		servicePorts = appendServicePorts(servicePorts, b.Instance.Spec.Config.Amqp.Port, "amqp")
 	}
 
@@ -67,7 +67,7 @@ func (b *HeadlessServiceReconciler) newObject() *corev1.Service {
 		servicePorts = appendServicePorts(servicePorts, b.Instance.Spec.Config.Amqp.TlsPort, "amqps")
 	}
 
-	if b.Instance.Spec.Config.Mqtt.Port != 0 {
+	if b.Instance.Spec.Config.Mqtt.Port > 0 {
 		servicePorts = appendServicePorts(servicePorts, b.Instance.Spec.Config.Mqtt.Port, "mqtt")
 	}
 

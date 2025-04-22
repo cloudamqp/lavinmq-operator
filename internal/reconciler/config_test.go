@@ -2,6 +2,7 @@ package reconciler_test
 
 import (
 	"context"
+	"fmt"
 	cloudamqpcomv1alpha1 "lavinmq-operator/api/v1alpha1"
 	"lavinmq-operator/internal/reconciler"
 
@@ -66,12 +67,15 @@ var _ = Describe("ConfigReconciler", func() {
 
 			[mgmt]
 			bind = 0.0.0.0
+			port = 15672
 
 			[amqp]
 			bind = 0.0.0.0
+			port = 5672
 
 			[mqtt]
 			bind = 0.0.0.0
+			port = 1883
 
 			[clustering]
 			bind = 0.0.0.0
@@ -94,7 +98,6 @@ var _ = Describe("ConfigReconciler", func() {
 			instance.Spec.Config.Mgmt.Port = 2222
 			instance.Spec.Config.Amqp.TlsPort = 3333
 			instance.Spec.Config.Mgmt.TlsPort = 4444
-
 			Expect(k8sClient.Update(context.Background(), instance)).To(Succeed())
 		})
 
@@ -114,6 +117,7 @@ var _ = Describe("ConfigReconciler", func() {
 
 			[mqtt]
 			bind = 0.0.0.0
+			port = 1883
 
 			[clustering]
 			bind = 0.0.0.0
@@ -132,43 +136,42 @@ var _ = Describe("ConfigReconciler", func() {
 
 	})
 
-	// I think this test is not needed anymore with the new "reconciler" approach where it updates the configmap directly.
-	// 	Context("When diffing config maps", func() {
-	// 		var (
-	// 			oldConfigMap *corev1.ConfigMap
-	// 		)
+	Context("When disabling non tls ports", func() {
+		BeforeEach(func() {
+			instance.Spec.Config.Amqp.Port = -1
+			instance.Spec.Config.Mgmt.Port = -1
+			instance.Spec.Config.Mqtt.Port = -1
+			Expect(k8sClient.Update(context.Background(), instance)).To(Succeed())
+		})
 
-	// 		BeforeEach(func() {
-	// 			oldConfigMap = &corev1.ConfigMap{
-	// 				Data: map[string]string{
-	// 					"lavinmq.ini": `
-	// [main]
-	// log_level = info
-	// data_dir = /var/lib/lavinmq
+		expectedConfig := `
+			[main]
+			data_dir = /var/lib/lavinmq
 
-	// [mgmt]
-	// bind = 0.0.0.0
+			[mgmt]
+			bind = 0.0.0.0
 
-	// [amqp]
-	// bind = 0.0.0.0
-	// heartbeat = 300
+			[amqp]
+			bind = 0.0.0.0
 
-	// [clustering]
-	// enabled = true
-	// bind = 0.0.0.0
-	// port = 5679
-	// advertised_uri = tcp://test-resource:5679`,
-	// 				},
-	// 			}
-	// 		})
+			[mqtt]
+			bind = 0.0.0.0
 
-	// 		It("should return no diff when configs are identical", func() {
-	// 			builder.Reconcile(context.Background())
+			[clustering]
+			bind = 0.0.0.0
+			port = 5679
+		`
 
-	//			configMap := &corev1.ConfigMap{}
-	//			err := k8sClient.Get(context.Background(), types.NamespacedName{Name: "test-resource-config", Namespace: "default"}, configMap)
-	//			Expect(err).NotTo(HaveOccurred())
-	//			Expect(configMap.Data["lavinmq.ini"]).To(Equal(oldConfigMap.Data["lavinmq.ini"]))
-	//		})
-	//	})
+		It("Should remove ports in according section", func() {
+			rc.Reconcile(context.Background())
+
+			configMap := &corev1.ConfigMap{}
+			err := k8sClient.Get(context.Background(), namespacedName, configMap)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(configMap.Name).To(Equal(namespacedName.Name))
+			fmt.Printf("ConfigMap Data: %v\n", configMap.Data)
+			fmt.Printf("Expected Config: %v\n", expectedConfig)
+			verifyConfigMapEquality(configMap, expectedConfig)
+		})
+	})
 })
