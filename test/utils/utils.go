@@ -20,9 +20,8 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
-
-	. "github.com/onsi/ginkgo/v2" //nolint:golint,revive
 )
 
 const (
@@ -32,10 +31,13 @@ const (
 
 	certmanagerVersion = "v1.14.4"
 	certmanagerURLTmpl = "https://github.com/jetstack/cert-manager/releases/download/%s/cert-manager.yaml"
+
+	etcdOperatorVersion = "v0.1.0"
+	etcdOperatorURL     = "https://github.com/etcd-io/etcd-operator/releases/download/%s/install-%s.yaml"
 )
 
 func warnError(err error) {
-	_, _ = fmt.Fprintf(GinkgoWriter, "warning: %v\n", err)
+	_, _ = fmt.Printf("warning: %v\n", err)
 }
 
 // InstallPrometheusOperator installs the prometheus Operator to be used to export the enabled metrics.
@@ -52,12 +54,12 @@ func Run(cmd *exec.Cmd) ([]byte, error) {
 	cmd.Dir = dir
 
 	if err := os.Chdir(cmd.Dir); err != nil {
-		_, _ = fmt.Fprintf(GinkgoWriter, "chdir dir: %s\n", err)
+		_, _ = fmt.Printf("chdir dir: %s\n", err)
 	}
 
 	cmd.Env = append(os.Environ(), "GO111MODULE=on")
 	command := strings.Join(cmd.Args, " ")
-	_, _ = fmt.Fprintf(GinkgoWriter, "running: %s\n", command)
+	_, _ = fmt.Printf("running: %s\n", command)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return output, fmt.Errorf("%s failed with error: (%v) %s", command, err, string(output))
@@ -103,13 +105,127 @@ func InstallCertManager() error {
 	return err
 }
 
-// LoadImageToKindClusterWithName loads a local docker image to the kind cluster
-func LoadImageToKindClusterWithName(name string) error {
-	cluster := "kind"
-	if v, ok := os.LookupEnv("KIND_CLUSTER"); ok {
-		cluster = v
+func InstallEtcdOperator() error {
+	url := fmt.Sprintf(etcdOperatorURL, etcdOperatorVersion, etcdOperatorVersion)
+	cmd := exec.Command("kubectl", "apply", "-f", url)
+	if _, err := Run(cmd); err != nil {
+		return err
 	}
-	kindOptions := []string{"load", "docker-image", name, "--name", cluster}
+	return nil
+}
+
+func UninstallEtcdOperator() {
+	url := fmt.Sprintf(etcdOperatorURL, etcdOperatorVersion, etcdOperatorVersion)
+	cmd := exec.Command("kubectl", "delete", "-f", url)
+	if _, err := Run(cmd); err != nil {
+		warnError(err)
+	}
+}
+
+func SetupEtcdCluster(namespace string) error {
+	etcdClusterPath := filepath.Join("config", "samples", "etcd_cluster.yaml")
+	cmd := exec.Command("kubectl", "apply", "-f", etcdClusterPath, "--namespace", namespace)
+	if _, err := Run(cmd); err != nil {
+		return err
+	}
+
+	// Wait for the etcd cluster to be ready
+	// Note: this is a hardcoded name for the etcd cluster, if the name is changed, the test setup will fail
+	cmd = exec.Command("kubectl", "wait", "pod/etcd-cluster-2", "--for=condition=Ready",
+		"--timeout=5m", "--namespace", namespace)
+	_, err := Run(cmd)
+	if err != nil {
+		return err
+	}
+
+	// Expect all etcd pods to be ready
+	cmd = exec.Command("kubectl", "exec", "etcd-cluster-0", "--namespace", namespace, "--", "etcdctl", "member", "list")
+	result, err := Run(cmd)
+	if err != nil {
+		return err
+	}
+
+	// Verify we have exactly 3 "started" entries
+	startedCount := strings.Count(string(result), "started")
+	if startedCount != 3 {
+		return fmt.Errorf("expected 3 'started' entries in etcd member list, got %d", startedCount)
+	}
+
+	return nil
+}
+
+func BuildingAndInstallingOperator(projectimage string, kindClusterName string) error {
+	fmt.Println("building the manager(Operator) image")
+	cmd := exec.Command("make", "docker-build", fmt.Sprintf("IMG=%s", projectimage))
+	_, err := Run(cmd)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("loading the the manager(Operator) image on Kind")
+	err = LoadImageToKindClusterWithName(projectimage, kindClusterName)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("installing the Operator CRD")
+	cmd = exec.Command("make", "install")
+	_, err = Run(cmd)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("deploying the controller-manager")
+	cmd = exec.Command("make", "deploy", fmt.Sprintf("IMG=%s", projectimage))
+	_, err = Run(cmd)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func VerifyControllerUp(namespace string) error {
+	fmt.Println("validating that the controller-manager pod is running as expected")
+	cmd := exec.Command("kubectl", "get",
+		"pods", "-l", "control-plane=controller-manager",
+		"-o", "go-template={{ range .items }}"+
+			"{{ if not .metadata.deletionTimestamp }}"+
+			"{{ .metadata.name }}"+
+			"{{ \"\\n\" }}{{ end }}{{ end }}",
+		"-n", namespace,
+	)
+
+	podOutput, err := Run(cmd)
+	if err != nil {
+		return err
+	}
+
+	podNames := GetNonEmptyLines(string(podOutput))
+	if len(podNames) != 1 {
+		return fmt.Errorf("expect 1 controller pods running, but got %d", len(podNames))
+	}
+	controllerPodName := podNames[0]
+
+	// Validate pod status
+	cmd = exec.Command("kubectl", "get",
+		"pods", controllerPodName, "-o", "jsonpath={.status.phase}",
+		"-n", namespace,
+	)
+	status, err := Run(cmd)
+	if err != nil {
+		return err
+	}
+
+	if string(status) != "Running" {
+		return fmt.Errorf("controller pod in %s status", status)
+	}
+	return nil
+}
+
+// LoadImageToKindClusterWithName loads a local docker image to the kind cluster
+func LoadImageToKindClusterWithName(name string, clusterName string) error {
+	kindOptions := []string{"load", "docker-image", name, "--name", clusterName}
 	cmd := exec.Command("kind", kindOptions...)
 	_, err := Run(cmd)
 	return err
