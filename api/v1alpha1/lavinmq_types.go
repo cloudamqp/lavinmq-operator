@@ -58,11 +58,11 @@ type MainConfig struct {
 	// +optional
 	ConsumerTimeout uint64 `json:"consumer_timeout,omitempty"`
 
-	// The default prefetch value for consumers if not set by the consumer.
+	// Default prefetch value for consumers if not set by the consumer.
 	// +optional
 	DefaultConsumerPrefetch uint64 `json:"default_consumer_prefetch,omitempty"`
 
-	// The hashed password for the default user.
+	// Hashed password for the default user.
 	// Use lavinmqctl hash_password or /api/auth/hash_password to generate the password hash.
 	// +optional
 	DefaultPassword string `json:"default_password,omitempty"`
@@ -131,10 +131,15 @@ type MainConfig struct {
 
 type MgmtConfig struct {
 	// Port for the HTTP management interface.
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=65535
+	// +kubebuilder:default=15672
 	// +optional
 	Port int32 `json:"port,omitempty"`
 
 	// Port for the HTTPS management interface.
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=65535
 	// +optional
 	TlsPort int32 `json:"tls_port,omitempty"`
 }
@@ -157,10 +162,15 @@ type AmqpConfig struct {
 	MaxMessageSize uint64 `json:"max_message_size,omitempty"`
 
 	// Port for the AMQP interface.
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=65535
+	// +kubebuilder:default=5672
 	// +optional
 	Port int32 `json:"port,omitempty"`
 
 	// Port for the AMQPS interface.
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=65535
 	// +optional
 	TlsPort int32 `json:"tls_port,omitempty"`
 }
@@ -171,10 +181,15 @@ type MqttConfig struct {
 	MaxInflightMessages uint64 `json:"max_inflight_messages,omitempty"`
 
 	// Port for the MQTT interface.
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=65535
+	// +kubebuilder:default=1883
 	// +optional
 	Port int32 `json:"port,omitempty"`
 
 	// Port for the MQTTS interface.
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=65535
 	// +optional
 	TlsPort int32 `json:"tls_port,omitempty"`
 }
