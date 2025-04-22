@@ -2,7 +2,6 @@ package reconciler_test
 
 import (
 	"context"
-	"fmt"
 	cloudamqpcomv1alpha1 "lavinmq-operator/api/v1alpha1"
 	"lavinmq-operator/internal/reconciler"
 
@@ -172,8 +171,6 @@ var _ = Describe("ConfigReconciler", func() {
 			err := k8sClient.Get(context.Background(), namespacedName, configMap)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(configMap.Name).To(Equal(namespacedName.Name))
-			fmt.Printf("ConfigMap Data: %v\n", configMap.Data)
-			fmt.Printf("Expected Config: %v\n", expectedConfig)
 			verifyConfigMapEquality(configMap, expectedConfig)
 		})
 	})

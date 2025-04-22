@@ -85,18 +85,22 @@ var _ = Describe("HeadlessServiceReconciler", func() {
 			i = slices.IndexFunc(service.Spec.Ports, func(port corev1.ServicePort) bool {
 				return port.Name == "http"
 			})
+			Expect(i).ToNot(Equal(-1))
 			Expect(service.Spec.Ports[i].Port).To(Equal(int32(2222)))
 			i = slices.IndexFunc(service.Spec.Ports, func(port corev1.ServicePort) bool {
 				return port.Name == "amqps"
 			})
+			Expect(i).ToNot(Equal(-1))
 			Expect(service.Spec.Ports[i].Port).To(Equal(int32(3333)))
 			i = slices.IndexFunc(service.Spec.Ports, func(port corev1.ServicePort) bool {
 				return port.Name == "https"
 			})
+			Expect(i).ToNot(Equal(-1))
 			Expect(service.Spec.Ports[i].Port).To(Equal(int32(4444)))
 			i = slices.IndexFunc(service.Spec.Ports, func(port corev1.ServicePort) bool {
 				return port.Name == "mqtt"
 			})
+			Expect(i).ToNot(Equal(-1))
 			Expect(service.Spec.Ports[i].Port).To(Equal(int32(5555)))
 		})
 	})
