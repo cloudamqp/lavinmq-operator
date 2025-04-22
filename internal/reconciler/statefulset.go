@@ -69,14 +69,14 @@ func (b *StatefulSetReconciler) newObject() *appsv1.StatefulSet {
 }
 
 func (b *StatefulSetReconciler) appendSpec(sts *appsv1.StatefulSet) *appsv1.StatefulSet {
-	configVolumeName := fmt.Sprintf("%s-config", b.Instance.Name)
+	configVolumeName := b.Instance.Name
 
 	sts.Spec = appsv1.StatefulSetSpec{
 		Replicas: &b.Instance.Spec.Replicas,
 		Selector: &metav1.LabelSelector{
 			MatchLabels: sts.Labels,
 		},
-		ServiceName: fmt.Sprintf("%s-service", b.Instance.Name),
+		ServiceName: b.Instance.Name,
 		Template: corev1.PodTemplateSpec{
 			ObjectMeta: metav1.ObjectMeta{
 				Labels:      sts.Labels,

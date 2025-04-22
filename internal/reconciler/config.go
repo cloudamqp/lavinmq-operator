@@ -228,7 +228,7 @@ func (b *ConfigReconciler) AppendMgmtConfig(cfg *ini.File) {
 	}
 }
 
-func (b *ConfigReconciler) updateFields(ctx context.Context, configMap *corev1.ConfigMap) error {
+func (b *ConfigReconciler) updateFields(_ context.Context, configMap *corev1.ConfigMap) error {
 	newConfigMap, err := b.newObject()
 	if err != nil {
 		return err

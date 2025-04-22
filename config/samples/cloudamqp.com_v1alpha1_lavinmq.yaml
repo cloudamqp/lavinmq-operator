@@ -28,7 +28,6 @@ spec:
     mgmt:
       port: 8080
     amqp:
-      port: 5672
       channel_max: 100
     mqtt:
       max_inflight_messages: 100
