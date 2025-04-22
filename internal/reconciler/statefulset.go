@@ -183,6 +183,7 @@ func appendContainerPort(containerPorts []corev1.ContainerPort, port int32, name
 	containerPorts = append(containerPorts, corev1.ContainerPort{
 		Name:          name,
 		ContainerPort: port,
+		Protocol:      corev1.ProtocolTCP,
 	})
 	return containerPorts
 }

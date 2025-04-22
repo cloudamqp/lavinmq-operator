@@ -26,7 +26,7 @@ spec:
       consumer_timeout: 20000
       default_consumer_prefetch: 100
     mgmt:
-      port: 15672
+      port: 8080
     amqp:
       port: 5672
       channel_max: 100
