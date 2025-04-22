@@ -195,12 +195,12 @@ func (b *ConfigReconciler) AppendAmqpConfig(cfg *ini.File) {
 	if amqpConfig.MaxMessageSize != 0 {
 		cfg.Section("amqp").Key("max_message_size").SetValue(fmt.Sprintf("%d", amqpConfig.MaxMessageSize))
 	}
-	if amqpConfig.Port > 0 {
-		cfg.Section("amqp").Key("port").SetValue(fmt.Sprintf("%d", amqpConfig.Port))
-	}
+
 	if amqpConfig.TlsPort != 0 {
 		cfg.Section("amqp").Key("tls_port").SetValue(fmt.Sprintf("%d", amqpConfig.TlsPort))
 	}
+
+	cfg.Section("amqp").Key("port").SetValue(fmt.Sprintf("%d", amqpConfig.Port))
 }
 
 func (b *ConfigReconciler) AppendMqttConfig(cfg *ini.File) {
@@ -209,23 +209,22 @@ func (b *ConfigReconciler) AppendMqttConfig(cfg *ini.File) {
 	if mqttConfig.MaxInflightMessages != 0 {
 		cfg.Section("mqtt").Key("max_inflight_messages").SetValue(fmt.Sprintf("%d", mqttConfig.MaxInflightMessages))
 	}
-	if mqttConfig.Port > 0 {
-		cfg.Section("mqtt").Key("port").SetValue(fmt.Sprintf("%d", mqttConfig.Port))
-	}
+
 	if mqttConfig.TlsPort != 0 {
 		cfg.Section("mqtt").Key("tls_port").SetValue(fmt.Sprintf("%d", mqttConfig.TlsPort))
 	}
 
+	cfg.Section("mqtt").Key("port").SetValue(fmt.Sprintf("%d", mqttConfig.Port))
 }
 
 func (b *ConfigReconciler) AppendMgmtConfig(cfg *ini.File) {
 	mgmtConfig := b.Instance.Spec.Config.Mgmt
-	if mgmtConfig.Port > 0 {
-		cfg.Section("mgmt").Key("port").SetValue(fmt.Sprintf("%d", mgmtConfig.Port))
-	}
+
 	if mgmtConfig.TlsPort != 0 {
 		cfg.Section("mgmt").Key("tls_port").SetValue(fmt.Sprintf("%d", mgmtConfig.TlsPort))
 	}
+
+	cfg.Section("mgmt").Key("port").SetValue(fmt.Sprintf("%d", mgmtConfig.Port))
 }
 
 func (b *ConfigReconciler) updateFields(_ context.Context, configMap *corev1.ConfigMap) error {

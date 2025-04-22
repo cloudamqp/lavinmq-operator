@@ -150,12 +150,15 @@ var _ = Describe("ConfigReconciler", func() {
 
 			[mgmt]
 			bind = 0.0.0.0
+			port = -1
 
 			[amqp]
 			bind = 0.0.0.0
+			port = -1
 
 			[mqtt]
 			bind = 0.0.0.0
+			port = -1
 
 			[clustering]
 			bind = 0.0.0.0
