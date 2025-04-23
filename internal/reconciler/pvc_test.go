@@ -1,13 +1,12 @@
 package reconciler_test
 
 import (
-	"context"
 	"fmt"
 	"lavinmq-operator/api/v1alpha1"
 	"lavinmq-operator/internal/reconciler"
+	"testing"
 
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -15,166 +14,144 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-var _ = Describe("PVCReconciler", func() {
-	var (
-		instance       *v1alpha1.LavinMQ
-		rc             *reconciler.PVCReconciler
-		namespacedName = types.NamespacedName{
-			Name:      "test-lavinmq",
-			Namespace: "default",
-		}
-	)
+func TestDefaultPVCReconciler(t *testing.T) {
+	instance := defaultInstance.DeepCopy()
+	rc := &reconciler.PVCReconciler{
+		ResourceReconciler: &reconciler.ResourceReconciler{
+			Instance: instance,
+			Scheme:   scheme.Scheme,
+			Client:   k8sClient,
+		},
+	}
 
-	BeforeEach(func() {
-		instance = &v1alpha1.LavinMQ{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      namespacedName.Name,
-				Namespace: "default",
-			},
-			Spec: v1alpha1.LavinMQSpec{
-				DataVolumeClaimSpec: corev1.PersistentVolumeClaimSpec{
-					AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
-					Resources: corev1.VolumeResourceRequirements{
-						Requests: corev1.ResourceList{
-							corev1.ResourceStorage: resource.MustParse("10Gi"),
-						},
-					},
-				},
-				Replicas: 1,
-			},
-		}
+	err := k8sClient.Create(t.Context(), instance)
+	if err != nil {
+		t.Fatalf("Failed to create instance: %v", err)
+	}
 
-		rc = &reconciler.PVCReconciler{
-			ResourceReconciler: &reconciler.ResourceReconciler{
-				Instance: instance,
-				Scheme:   scheme.Scheme,
-				Client:   k8sClient,
-				Logger:   log.FromContext(context.Background()),
-			},
-		}
+	defer cleanupPvcResources(t, instance)
 
-		err := k8sClient.Create(context.Background(), instance)
-		Expect(err).NotTo(HaveOccurred())
-	})
+	rc.Reconcile(t.Context())
 
-	AfterEach(func() {
-		Expect(k8sClient.Delete(context.Background(), instance)).To(Succeed())
-		for i := range int(instance.Spec.Replicas) {
-			pvc := &corev1.PersistentVolumeClaim{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      fmt.Sprintf("data-%s-%d", instance.Name, i),
-					Namespace: instance.Namespace,
-				},
-			}
+	pvc := &corev1.PersistentVolumeClaim{}
+	assert.NoError(t, k8sClient.Get(t.Context(), types.NamespacedName{Name: fmt.Sprintf("data-%s-0", instance.Name), Namespace: instance.Namespace}, pvc))
+	assert.NotNil(t, pvc)
 
-			k8sClient.Get(context.Background(), types.NamespacedName{Name: fmt.Sprintf("data-%s-%d", instance.Name, i), Namespace: instance.Namespace}, pvc)
-			By("Removing PVC finalizer to allow deletion")
-			pvc.Finalizers = nil
-			err := k8sClient.Update(context.Background(), pvc)
-			Expect(err).NotTo(HaveOccurred())
+	assert.Equal(t, pvc.Name, fmt.Sprintf("data-%s-0", instance.Name))
+	assert.Equal(t, pvc.Namespace, instance.Namespace)
+	assert.Equal(t, pvc.Spec.AccessModes, instance.Spec.DataVolumeClaimSpec.AccessModes)
+	// No diff
+	assert.Zero(t, pvc.Spec.Resources.Requests.Storage().Cmp(*instance.Spec.DataVolumeClaimSpec.Resources.Requests.Storage()))
+}
 
-			err = k8sClient.Delete(context.Background(), pvc)
-			if err != nil {
-				// Only fail if error is not "not found"
-				Expect(apierrors.IsNotFound(err)).To(BeTrue())
-			}
-		}
-	})
+func TestNoChangesToPVC(t *testing.T) {
+	instance := defaultInstance.DeepCopy()
+	rc := &reconciler.PVCReconciler{
+		ResourceReconciler: &reconciler.ResourceReconciler{
+			Instance: instance,
+			Scheme:   scheme.Scheme,
+			Client:   k8sClient,
+		},
+	}
 
-	When("using default values", func() {
-		It("should create a PVC with the correct template", func() {
-			rc.Reconcile(context.Background())
+	err := k8sClient.Create(t.Context(), instance)
+	if err != nil {
+		t.Fatalf("Failed to create instance: %v", err)
+	}
+	_, err = rc.Reconcile(t.Context())
+	assert.NoError(t, err)
 
-			pvc := &corev1.PersistentVolumeClaim{}
-			Expect(k8sClient.Get(context.Background(), types.NamespacedName{Name: fmt.Sprintf("data-%s-0", instance.Name), Namespace: instance.Namespace}, pvc)).To(Succeed())
-			Expect(pvc).NotTo(BeNil())
+	createdPvc := &corev1.PersistentVolumeClaim{}
+	err = k8sClient.Get(t.Context(), types.NamespacedName{Name: fmt.Sprintf("data-%s-0", instance.Name), Namespace: instance.Namespace}, createdPvc)
+	assert.NoError(t, err)
 
-			Expect(pvc.Name).To(Equal(fmt.Sprintf("data-%s-0", instance.Name)))
-			Expect(pvc.Namespace).To(Equal(instance.Namespace))
-			Expect(pvc.Spec.AccessModes).To(Equal(instance.Spec.DataVolumeClaimSpec.AccessModes))
-			Expect(pvc.Spec.Resources.Requests.Storage().Cmp(*instance.Spec.DataVolumeClaimSpec.Resources.Requests.Storage())).To(Equal(0))
-		})
-	})
+	defer cleanupPvcResources(t, instance)
 
-	When("there are no changes", func() {
-		It("should not make any changes to the PVC", func() {
-			By("Reconciling the instance setup")
-			_, err := rc.Reconcile(context.Background())
-			Expect(err).NotTo(HaveOccurred())
+	_, err = rc.Reconcile(t.Context())
+	assert.NoError(t, err)
 
-			By("Checking the PVC")
-			pvc := &corev1.PersistentVolumeClaim{}
-			err = k8sClient.Get(context.Background(), types.NamespacedName{Name: fmt.Sprintf("data-%s-0", instance.Name), Namespace: instance.Namespace}, pvc)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(pvc.Spec.Resources.Requests.Storage().Cmp(*instance.Spec.DataVolumeClaimSpec.Resources.Requests.Storage())).To(Equal(0))
-		})
-	})
+	updatedPvc := &corev1.PersistentVolumeClaim{}
+	err = k8sClient.Get(t.Context(), types.NamespacedName{Name: fmt.Sprintf("data-%s-0", instance.Name), Namespace: instance.Namespace}, updatedPvc)
+	assert.NoError(t, err)
 
-	When("storage size increases", func() {
-		var storageClass *storagev1.StorageClass
+	assert.Equal(t, createdPvc.Generation, updatedPvc.Generation)
+	assert.Zero(t, createdPvc.Spec.Resources.Requests.Storage().Cmp(*updatedPvc.Spec.Resources.Requests.Storage()))
+}
 
-		BeforeEach(func() {
-			storageClass = createStorageClass()
-			instance.Spec.DataVolumeClaimSpec.StorageClassName = &[]string{"default-sc"}[0]
-			err := k8sClient.Update(context.Background(), instance)
-			Expect(err).NotTo(HaveOccurred())
-		})
+func TestStorageSizeIncrease(t *testing.T) {
+	storageClass := createStorageClass(t)
+	defer k8sClient.Delete(t.Context(), storageClass)
 
-		AfterEach(func() {
-			Expect(k8sClient.Delete(context.Background(), storageClass)).To(Succeed())
-		})
+	instance := defaultInstance.DeepCopy()
+	instance.Spec.DataVolumeClaimSpec.StorageClassName = &[]string{"default-sc"}[0]
+	rc := &reconciler.PVCReconciler{
+		ResourceReconciler: &reconciler.ResourceReconciler{
+			Instance: instance,
+			Scheme:   scheme.Scheme,
+			Client:   k8sClient,
+		},
+	}
 
-		It("should increase the PVC size", func() {
-			By("Reconciling the instance setup")
-			_, err := rc.Reconcile(context.Background())
-			Expect(err).NotTo(HaveOccurred())
+	err := k8sClient.Create(t.Context(), instance)
+	assert.NoError(t, err)
 
-			By("Setting the PVC to bound")
-			pvc := &corev1.PersistentVolumeClaim{}
-			Expect(k8sClient.Get(context.Background(), types.NamespacedName{Name: fmt.Sprintf("data-%s-0", instance.Name), Namespace: instance.Namespace}, pvc)).To(Succeed())
-			pvc.Status.Phase = corev1.ClaimBound
-			Expect(k8sClient.Status().Update(context.Background(), pvc)).To(Succeed())
+	defer cleanupPvcResources(t, instance)
 
-			By("Updating the storage size")
-			instance.Spec.DataVolumeClaimSpec.Resources.Requests[corev1.ResourceStorage] = resource.MustParse("20Gi")
-			err = k8sClient.Update(context.Background(), instance)
-			Expect(err).NotTo(HaveOccurred())
+	rc.Reconcile(t.Context())
 
-			By("Reconciling the updated instance")
-			_, err = rc.Reconcile(context.Background())
-			Expect(err).NotTo(HaveOccurred())
+	t.Log("Setting the PVC to bound")
+	pvc := &corev1.PersistentVolumeClaim{}
+	assert.NoError(t, k8sClient.Get(t.Context(), types.NamespacedName{Name: fmt.Sprintf("data-%s-0", instance.Name), Namespace: instance.Namespace}, pvc))
+	pvc.Status.Phase = corev1.ClaimBound
+	assert.NoError(t, k8sClient.Status().Update(t.Context(), pvc))
 
-			pvc = &corev1.PersistentVolumeClaim{}
-			err = k8sClient.Get(context.Background(), types.NamespacedName{Name: fmt.Sprintf("data-%s-0", instance.Name), Namespace: instance.Namespace}, pvc)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(pvc.Spec.Resources.Requests.Storage().Cmp(*instance.Spec.DataVolumeClaimSpec.Resources.Requests.Storage())).To(Equal(0))
-		})
-	})
+	t.Log("Updating the storage size")
+	instance.Spec.DataVolumeClaimSpec.Resources.Requests[corev1.ResourceStorage] = resource.MustParse("20Gi")
+	assert.NoError(t, k8sClient.Update(t.Context(), instance))
 
-	When("storage size decreases", func() {
-		It("should not allow the change and return an error", func() {
-			By("Reconciling the setup phase")
-			_, err := rc.Reconcile(context.Background())
-			Expect(err).NotTo(HaveOccurred())
+	t.Log("Reconciling the updated instance")
+	_, err = rc.Reconcile(t.Context())
+	assert.NoError(t, err)
 
-			By("Updating the storage size")
-			instance.Spec.DataVolumeClaimSpec.Resources.Requests[corev1.ResourceStorage] = resource.MustParse("5Gi")
+	pvc = &corev1.PersistentVolumeClaim{}
+	assert.NoError(t, k8sClient.Get(t.Context(), types.NamespacedName{Name: fmt.Sprintf("data-%s-0", instance.Name), Namespace: instance.Namespace}, pvc))
+	assert.Zero(t, pvc.Spec.Resources.Requests.Storage().Cmp(*instance.Spec.DataVolumeClaimSpec.Resources.Requests.Storage()))
+}
 
-			err = k8sClient.Update(context.Background(), instance)
-			Expect(err).NotTo(HaveOccurred())
+func TestStorageSizeDecrease(t *testing.T) {
+	instance := defaultInstance.DeepCopy()
+	rc := &reconciler.PVCReconciler{
+		ResourceReconciler: &reconciler.ResourceReconciler{
+			Instance: instance,
+			Scheme:   scheme.Scheme,
+			Client:   k8sClient,
+		},
+	}
 
-			By("Reconciling the updated instance")
-			_, err = rc.Reconcile(context.Background())
-			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("volume size decreased, not supported"))
-		})
-	})
-})
+	err := k8sClient.Create(t.Context(), instance)
+	assert.NoError(t, err)
 
-func createStorageClass() *storagev1.StorageClass {
+	defer cleanupPvcResources(t, instance)
+
+	t.Log("Reconciling the setup phase")
+	_, err = rc.Reconcile(t.Context())
+	assert.NoError(t, err)
+
+	t.Log("Updating the storage size")
+	instance.Spec.DataVolumeClaimSpec.Resources.Requests[corev1.ResourceStorage] = resource.MustParse("5Gi")
+
+	err = k8sClient.Update(t.Context(), instance)
+	assert.NoError(t, err)
+
+	t.Log("Reconciling the updated instance")
+	_, err = rc.Reconcile(t.Context())
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "volume size decreased, not supported")
+}
+
+func createStorageClass(t *testing.T) *storagev1.StorageClass {
 	storageClass := &storagev1.StorageClass{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "default-sc",
@@ -190,6 +167,39 @@ func createStorageClass() *storagev1.StorageClass {
 		AllowVolumeExpansion: &[]bool{true}[0],
 	}
 
-	Expect(k8sClient.Create(context.Background(), storageClass)).To(Succeed())
+	assert.NoError(t, k8sClient.Create(t.Context(), storageClass))
 	return storageClass
+}
+
+func cleanupPvcResources(t *testing.T, instance *v1alpha1.LavinMQ) {
+	err := k8sClient.Delete(t.Context(), instance)
+	if err != nil {
+		t.Fatalf("Failed to delete instance: %v", err)
+	}
+	for i := range int(instance.Spec.Replicas) {
+		pvc := &corev1.PersistentVolumeClaim{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      fmt.Sprintf("data-%s-%d", instance.Name, i),
+				Namespace: instance.Namespace,
+			},
+		}
+
+		err = k8sClient.Get(t.Context(), types.NamespacedName{Name: fmt.Sprintf("data-%s-%d", instance.Name, i), Namespace: instance.Namespace}, pvc)
+		if err != nil {
+			t.Fatalf("Failed to get PVC: %v", err)
+		}
+		pvc.Finalizers = nil
+		err = k8sClient.Update(t.Context(), pvc)
+		if err != nil {
+			t.Fatalf("Failed to update PVC: %v", err)
+		}
+
+		err = k8sClient.Delete(t.Context(), pvc)
+		if err != nil {
+			// Only fail if error is not "not found"
+			if !apierrors.IsNotFound(err) {
+				t.Fatalf("Failed to delete PVC: %v", err)
+			}
+		}
+	}
 }

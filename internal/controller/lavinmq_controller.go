@@ -68,7 +68,7 @@ type LavinMQReconciler struct {
 func (r *LavinMQReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
 
-	fmt.Printf("Reconciling LavinMQ %s\n", req.NamespacedName)
+	logger.Info(fmt.Sprintf("Reconciling LavinMQ %s\n", req.NamespacedName))
 
 	instance := &cloudamqpcomv1alpha1.LavinMQ{}
 	err := r.Get(ctx, req.NamespacedName, instance)

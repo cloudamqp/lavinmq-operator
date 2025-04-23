@@ -2,65 +2,45 @@ package reconciler_test
 
 import (
 	"context"
-	cloudamqpcomv1alpha1 "lavinmq-operator/api/v1alpha1"
 	"lavinmq-operator/internal/reconciler"
+	"testing"
 
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/assert"
 	ini "gopkg.in/ini.v1"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 )
 
-func verifyConfigMapEquality(configMap *corev1.ConfigMap, expectedConfig string) {
+func verifyConfigMapEquality(t *testing.T, configMap *corev1.ConfigMap, expectedConfig string) {
 	conf, _ := ini.Load([]byte(configMap.Data["lavinmq.ini"]))
 	expectedConf, _ := ini.Load([]byte(expectedConfig))
 
 	for _, section := range conf.Sections() {
 		for _, key := range section.Keys() {
 			val := conf.Section(section.Name()).Key(key.Name()).Value()
-			Expect(expectedConf.Section(section.Name()).Key(key.Name()).Value()).To(Equal(val))
+			assert.Equal(t, expectedConf.Section(section.Name()).Key(key.Name()).Value(), val)
 		}
 	}
 }
 
-var _ = Describe("ConfigReconciler", func() {
-	var namespacedName = types.NamespacedName{
-		Name:      "test-resource",
-		Namespace: "default",
+func TestDefaultConfig(t *testing.T) {
+	instance := defaultInstance.DeepCopy()
+	defer k8sClient.Delete(t.Context(), instance)
+
+	rc := &reconciler.ConfigReconciler{
+		ResourceReconciler: &reconciler.ResourceReconciler{
+			Instance: instance,
+			Scheme:   scheme.Scheme,
+			Client:   k8sClient,
+		},
 	}
-	var (
-		instance *cloudamqpcomv1alpha1.LavinMQ
-		rc       *reconciler.ConfigReconciler
-	)
 
-	BeforeEach(func() {
-		instance = &cloudamqpcomv1alpha1.LavinMQ{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      namespacedName.Name,
-				Namespace: namespacedName.Namespace,
-			},
-		}
+	assert.NoError(t, k8sClient.Create(t.Context(), instance))
 
-		rc = &reconciler.ConfigReconciler{
-			ResourceReconciler: &reconciler.ResourceReconciler{
-				Instance: instance,
-				Scheme:   scheme.Scheme,
-				Client:   k8sClient,
-			},
-		}
+	rc.Reconcile(t.Context())
 
-		Expect(k8sClient.Create(context.Background(), instance)).To(Succeed())
-	})
-
-	AfterEach(func() {
-		Expect(k8sClient.Delete(context.Background(), instance)).To(Succeed())
-	})
-
-	Context("When building a default ConfigMap", func() {
-		var expectedConfig = `
+	var expectedConfig = `
 			[main]
 			data_dir = /var/lib/lavinmq
 
@@ -80,98 +60,108 @@ var _ = Describe("ConfigReconciler", func() {
 			bind = 0.0.0.0
 			port = 5679
 	`
-		It("Should create a default ConfigMap", func() {
-			rc.Reconcile(context.Background())
+	rc.Reconcile(context.Background())
 
-			configMap := &corev1.ConfigMap{}
-			err := k8sClient.Get(context.Background(), namespacedName, configMap)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(configMap.Name).To(Equal(namespacedName.Name))
-			verifyConfigMapEquality(configMap, expectedConfig)
-		})
-	})
+	configMap := &corev1.ConfigMap{}
+	err := k8sClient.Get(t.Context(), types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, configMap)
+	assert.NoError(t, err)
+	assert.Equal(t, configMap.Name, instance.Name)
+	verifyConfigMapEquality(t, configMap, expectedConfig)
+}
 
-	Context("When providing custom ports", func() {
-		BeforeEach(func() {
-			instance.Spec.Config.Amqp.Port = 1111
-			instance.Spec.Config.Mgmt.Port = 2222
-			instance.Spec.Config.Amqp.TlsPort = 3333
-			instance.Spec.Config.Mgmt.TlsPort = 4444
-			Expect(k8sClient.Update(context.Background(), instance)).To(Succeed())
-		})
+func TestCustomConfigPorts(t *testing.T) {
+	instance := defaultInstance.DeepCopy()
+	defer k8sClient.Delete(t.Context(), instance)
 
-		expectedConfig := `
-			[main]
-			data_dir = /var/lib/lavinmq
+	instance.Spec.Config.Amqp.Port = 1111
+	instance.Spec.Config.Mgmt.Port = 2222
+	instance.Spec.Config.Amqp.TlsPort = 3333
+	instance.Spec.Config.Mgmt.TlsPort = 4444
 
-			[mgmt]
-			bind = 0.0.0.0
-			port = 2222
-			tls_port = 4444
+	assert.NoError(t, k8sClient.Create(t.Context(), instance))
 
-			[amqp]
-			bind = 0.0.0.0
-			port = 1111
-			tls_port = 3333
+	expectedConfig := `
+	[main]
+	data_dir = /var/lib/lavinmq
 
-			[mqtt]
-			bind = 0.0.0.0
-			port = 1883
+	[mgmt]
+	bind = 0.0.0.0
+	port = 2222
+	tls_port = 4444
 
-			[clustering]
-			bind = 0.0.0.0
-			port = 5679
-		`
+	[amqp]
+	bind = 0.0.0.0
+	port = 1111
+	tls_port = 3333
 
-		It("Should setup ports in according section", func() {
-			rc.Reconcile(context.Background())
+	[mqtt]
+	bind = 0.0.0.0
+	port = 1883
 
-			configMap := &corev1.ConfigMap{}
-			err := k8sClient.Get(context.Background(), namespacedName, configMap)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(configMap.Name).To(Equal(namespacedName.Name))
-			verifyConfigMapEquality(configMap, expectedConfig)
-		})
+	[clustering]
+	bind = 0.0.0.0
+	port = 5679
+`
 
-	})
+	rc := &reconciler.ConfigReconciler{
+		ResourceReconciler: &reconciler.ResourceReconciler{
+			Instance: instance,
+			Scheme:   scheme.Scheme,
+			Client:   k8sClient,
+		},
+	}
 
-	Context("When disabling non tls ports", func() {
-		BeforeEach(func() {
-			instance.Spec.Config.Amqp.Port = -1
-			instance.Spec.Config.Mgmt.Port = -1
-			instance.Spec.Config.Mqtt.Port = -1
-			Expect(k8sClient.Update(context.Background(), instance)).To(Succeed())
-		})
+	rc.Reconcile(t.Context())
+	configMap := &corev1.ConfigMap{}
+	err := k8sClient.Get(t.Context(), types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, configMap)
+	assert.NoError(t, err)
+	assert.Equal(t, configMap.Name, instance.Name)
+	verifyConfigMapEquality(t, configMap, expectedConfig)
+}
 
-		expectedConfig := `
-			[main]
-			data_dir = /var/lib/lavinmq
+func TestDisablingNonTlsPorts(t *testing.T) {
+	instance := defaultInstance.DeepCopy()
+	defer k8sClient.Delete(t.Context(), instance)
 
-			[mgmt]
-			bind = 0.0.0.0
-			port = -1
+	instance.Spec.Config.Amqp.Port = -1
+	instance.Spec.Config.Mgmt.Port = -1
+	instance.Spec.Config.Mqtt.Port = -1
+	assert.NoError(t, k8sClient.Create(t.Context(), instance))
 
-			[amqp]
-			bind = 0.0.0.0
-			port = -1
+	expectedConfig := `
+	[main]
+	data_dir = /var/lib/lavinmq
 
-			[mqtt]
-			bind = 0.0.0.0
-			port = -1
+	[mgmt]
+	bind = 0.0.0.0
+	port = -1
 
-			[clustering]
-			bind = 0.0.0.0
-			port = 5679
-		`
+	[amqp]
+	bind = 0.0.0.0
+	port = -1
 
-		It("Should remove ports in according section", func() {
-			rc.Reconcile(context.Background())
+	[mqtt]
+	bind = 0.0.0.0
+	port = -1
 
-			configMap := &corev1.ConfigMap{}
-			err := k8sClient.Get(context.Background(), namespacedName, configMap)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(configMap.Name).To(Equal(namespacedName.Name))
-			verifyConfigMapEquality(configMap, expectedConfig)
-		})
-	})
-})
+	[clustering]
+	bind = 0.0.0.0
+	port = 5679
+`
+
+	rc := &reconciler.ConfigReconciler{
+		ResourceReconciler: &reconciler.ResourceReconciler{
+			Instance: instance,
+			Scheme:   scheme.Scheme,
+			Client:   k8sClient,
+		},
+	}
+
+	rc.Reconcile(t.Context())
+
+	configMap := &corev1.ConfigMap{}
+	err := k8sClient.Get(t.Context(), types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, configMap)
+	assert.NoError(t, err)
+	assert.Equal(t, configMap.Name, instance.Name)
+	verifyConfigMapEquality(t, configMap, expectedConfig)
+}
