@@ -56,17 +56,26 @@ func TestMain(m *testing.M) {
 
 		func(ctx context.Context, cfg *envconf.Config) (context.Context, error) {
 			fmt.Println("Installing etcd operator...")
-			utils.InstallEtcdOperator()
+			err := utils.InstallEtcdOperator()
+			if err != nil {
+				return ctx, fmt.Errorf("failed to install etcd operator: %w", err)
+			}
 			return ctx, nil
 		},
 		func(ctx context.Context, cfg *envconf.Config) (context.Context, error) {
 			fmt.Println("Starting etcd cluster...")
-			utils.SetupEtcdCluster(namespace)
+			err := utils.SetupEtcdCluster(namespace)
+			if err != nil {
+				return ctx, fmt.Errorf("failed to setup etcd cluster: %w", err)
+			}
 			return ctx, nil
 		},
 		func(ctx context.Context, cfg *envconf.Config) (context.Context, error) {
 			fmt.Println("Building and installing the operator...")
-			utils.BuildingAndInstallingOperator(projectimage, kindClusterName)
+			err := utils.BuildingAndInstallingOperator(projectimage, kindClusterName)
+			if err != nil {
+				return ctx, fmt.Errorf("failed to build and install operator: %w", err)
+			}
 			return ctx, nil
 		},
 	)
