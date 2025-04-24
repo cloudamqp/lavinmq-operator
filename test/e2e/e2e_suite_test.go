@@ -8,7 +8,6 @@ import (
 	"os/exec"
 	"testing"
 
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/e2e-framework/pkg/env"
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 	"sigs.k8s.io/e2e-framework/pkg/envfuncs"
@@ -18,7 +17,6 @@ import (
 var (
 	testEnv         env.Environment
 	namespace       string
-	k8sClient       client.Client
 	kindClusterName string
 	projectimage    = "cloudamqp/lavin-operator:v0.0.1"
 	clusterVersion  = "kindest/node:v1.32.2"
