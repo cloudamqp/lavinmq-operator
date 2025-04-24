@@ -20,7 +20,7 @@ var (
 	namespace       string
 	k8sClient       client.Client
 	kindClusterName string
-	projectimage    = "example.com/operator-sdk:v0.0.1"
+	projectimage    = "cloudamqp/lavin-operator:v0.0.1"
 	clusterVersion  = "kindest/node:v1.32.2"
 )
 
