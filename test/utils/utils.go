@@ -162,7 +162,7 @@ func BuildingAndInstallingOperator(projectimage string, kindClusterName string) 
 		return err
 	}
 
-	fmt.Println("loading the the manager(Operator) image on Kind")
+	fmt.Println("loading the manager(Operator) image on Kind")
 	err = LoadImageToKindClusterWithName(projectimage, kindClusterName)
 	if err != nil {
 		return err
