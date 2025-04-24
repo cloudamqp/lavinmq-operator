@@ -129,11 +129,20 @@ func SetupEtcdCluster(namespace string) error {
 		return err
 	}
 
+	// Wait for etcd-cluster-0 to be created
+	cmd = exec.Command("kubectl", "wait", "pod/etcd-cluster-2", "--for=create",
+		"--timeout=5m", "--namespace", namespace)
+
+	_, err := Run(cmd)
+	if err != nil {
+		return err
+	}
+
 	// Wait for the etcd cluster to be ready
 	// Note: this is a hardcoded name for the etcd cluster, if the name is changed, the test setup will fail
 	cmd = exec.Command("kubectl", "wait", "pod/etcd-cluster-2", "--for=condition=Ready",
 		"--timeout=5m", "--namespace", namespace)
-	_, err := Run(cmd)
+	_, err = Run(cmd)
 	if err != nil {
 		return err
 	}
