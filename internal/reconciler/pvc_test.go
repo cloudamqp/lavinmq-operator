@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"lavinmq-operator/api/v1alpha1"
 	"lavinmq-operator/internal/reconciler"
+	testutils "lavinmq-operator/internal/test_utils"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -17,7 +18,12 @@ import (
 )
 
 func TestDefaultPVCReconciler(t *testing.T) {
-	instance := defaultInstance.DeepCopy()
+	t.Parallel()
+	instance := testutils.GetDefaultInstance(&testutils.DefaultInstanceSettings{})
+	err := testutils.CreateNamespace(t.Context(), k8sClient, instance.Namespace)
+	assert.NoErrorf(t, err, "Failed to create namespace")
+	defer testutils.DeleteNamespace(t.Context(), k8sClient, instance.Namespace)
+
 	rc := &reconciler.PVCReconciler{
 		ResourceReconciler: &reconciler.ResourceReconciler{
 			Instance: instance,
@@ -26,7 +32,7 @@ func TestDefaultPVCReconciler(t *testing.T) {
 		},
 	}
 
-	err := k8sClient.Create(t.Context(), instance)
+	err = k8sClient.Create(t.Context(), instance)
 	assert.NoErrorf(t, err, "Failed to create instance")
 
 	defer cleanupPvcResources(t, instance)
@@ -37,15 +43,20 @@ func TestDefaultPVCReconciler(t *testing.T) {
 	assert.NoError(t, k8sClient.Get(t.Context(), types.NamespacedName{Name: fmt.Sprintf("data-%s-0", instance.Name), Namespace: instance.Namespace}, pvc))
 	assert.NotNil(t, pvc)
 
-	assert.Equal(t, pvc.Name, fmt.Sprintf("data-%s-0", instance.Name))
-	assert.Equal(t, pvc.Namespace, instance.Namespace)
-	assert.Equal(t, pvc.Spec.AccessModes, instance.Spec.DataVolumeClaimSpec.AccessModes)
+	assert.Equal(t, fmt.Sprintf("data-%s-0", instance.Name), pvc.Name)
+	assert.Equal(t, instance.Namespace, pvc.Namespace)
+	assert.Equal(t, instance.Spec.DataVolumeClaimSpec.AccessModes, pvc.Spec.AccessModes)
 	// No diff
 	assert.Zero(t, pvc.Spec.Resources.Requests.Storage().Cmp(*instance.Spec.DataVolumeClaimSpec.Resources.Requests.Storage()))
 }
 
 func TestNoChangesToPVC(t *testing.T) {
-	instance := defaultInstance.DeepCopy()
+	t.Parallel()
+	instance := testutils.GetDefaultInstance(&testutils.DefaultInstanceSettings{})
+	err := testutils.CreateNamespace(t.Context(), k8sClient, instance.Namespace)
+	assert.NoErrorf(t, err, "Failed to create namespace")
+	defer testutils.DeleteNamespace(t.Context(), k8sClient, instance.Namespace)
+
 	rc := &reconciler.PVCReconciler{
 		ResourceReconciler: &reconciler.ResourceReconciler{
 			Instance: instance,
@@ -54,7 +65,7 @@ func TestNoChangesToPVC(t *testing.T) {
 		},
 	}
 
-	err := k8sClient.Create(t.Context(), instance)
+	err = k8sClient.Create(t.Context(), instance)
 	assert.NoErrorf(t, err, "Failed to create instance")
 
 	defer cleanupPvcResources(t, instance)
@@ -73,16 +84,21 @@ func TestNoChangesToPVC(t *testing.T) {
 	err = k8sClient.Get(t.Context(), types.NamespacedName{Name: fmt.Sprintf("data-%s-0", instance.Name), Namespace: instance.Namespace}, updatedPvc)
 	assert.NoError(t, err)
 
-	assert.Equal(t, createdPvc.Generation, updatedPvc.Generation)
+	assert.Equal(t, updatedPvc.Generation, createdPvc.Generation)
 	assert.Zero(t, createdPvc.Spec.Resources.Requests.Storage().Cmp(*updatedPvc.Spec.Resources.Requests.Storage()))
 }
 
 func TestStorageSizeIncrease(t *testing.T) {
+	t.Parallel()
 	storageClass := createStorageClass(t)
 	defer k8sClient.Delete(t.Context(), storageClass)
 
-	instance := defaultInstance.DeepCopy()
-	instance.Spec.DataVolumeClaimSpec.StorageClassName = &[]string{"default-sc"}[0]
+	instance := testutils.GetDefaultInstance(&testutils.DefaultInstanceSettings{})
+	err := testutils.CreateNamespace(t.Context(), k8sClient, instance.Namespace)
+	assert.NoErrorf(t, err, "Failed to create namespace")
+	defer testutils.DeleteNamespace(t.Context(), k8sClient, instance.Namespace)
+
+	instance.Spec.DataVolumeClaimSpec.StorageClassName = &[]string{storageClass.Name}[0]
 	rc := &reconciler.PVCReconciler{
 		ResourceReconciler: &reconciler.ResourceReconciler{
 			Instance: instance,
@@ -91,7 +107,7 @@ func TestStorageSizeIncrease(t *testing.T) {
 		},
 	}
 
-	err := k8sClient.Create(t.Context(), instance)
+	err = k8sClient.Create(t.Context(), instance)
 	assert.NoError(t, err)
 
 	defer cleanupPvcResources(t, instance)
@@ -118,7 +134,12 @@ func TestStorageSizeIncrease(t *testing.T) {
 }
 
 func TestStorageSizeDecrease(t *testing.T) {
-	instance := defaultInstance.DeepCopy()
+	t.Parallel()
+	instance := testutils.GetDefaultInstance(&testutils.DefaultInstanceSettings{})
+	err := testutils.CreateNamespace(t.Context(), k8sClient, instance.Namespace)
+	assert.NoErrorf(t, err, "Failed to create namespace")
+	defer testutils.DeleteNamespace(t.Context(), k8sClient, instance.Namespace)
+
 	rc := &reconciler.PVCReconciler{
 		ResourceReconciler: &reconciler.ResourceReconciler{
 			Instance: instance,
@@ -127,7 +148,7 @@ func TestStorageSizeDecrease(t *testing.T) {
 		},
 	}
 
-	err := k8sClient.Create(t.Context(), instance)
+	err = k8sClient.Create(t.Context(), instance)
 	assert.NoError(t, err)
 
 	defer cleanupPvcResources(t, instance)

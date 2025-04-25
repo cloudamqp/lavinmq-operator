@@ -5,35 +5,20 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 
-	lavinmqv1alpha1 "lavinmq-operator/api/v1alpha1"
 	"lavinmq-operator/internal/reconciler"
+	testutils "lavinmq-operator/internal/test_utils"
 )
 
 func TestStatefulSetReconciler(t *testing.T) {
-	instance := &lavinmqv1alpha1.LavinMQ{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-lavinmq",
-			Namespace: "default",
-		},
-		Spec: lavinmqv1alpha1.LavinMQSpec{
-			Replicas: 1,
-			Image:    "test-image:latest",
-			DataVolumeClaimSpec: corev1.PersistentVolumeClaimSpec{ // Default spec
-				AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
-				Resources: corev1.VolumeResourceRequirements{
-					Requests: corev1.ResourceList{
-						corev1.ResourceStorage: resource.MustParse("1Gi"),
-					},
-				},
-			},
-		},
-	}
+	t.Parallel()
+	instance := testutils.GetDefaultInstance(&testutils.DefaultInstanceSettings{})
+
+	err := testutils.CreateNamespace(t.Context(), k8sClient, instance.Namespace)
+	assert.NoErrorf(t, err, "Failed to create namespace")
+	defer testutils.DeleteNamespace(t.Context(), k8sClient, instance.Namespace)
 
 	rc := &reconciler.StatefulSetReconciler{
 		ResourceReconciler: &reconciler.ResourceReconciler{
@@ -43,7 +28,7 @@ func TestStatefulSetReconciler(t *testing.T) {
 		},
 	}
 
-	err := k8sClient.Create(t.Context(), instance)
+	err = k8sClient.Create(t.Context(), instance)
 	assert.NoErrorf(t, err, "Failed to create instance")
 
 	instance.Spec.Image = "test-image:latest2"
@@ -57,5 +42,5 @@ func TestStatefulSetReconciler(t *testing.T) {
 	err = k8sClient.Get(t.Context(), types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, sts)
 	assert.NoErrorf(t, err, "Failed to get statefulset")
 
-	assert.Equal(t, sts.Spec.Template.Spec.Containers[0].Image, "test-image:latest2")
+	assert.Equal(t, "test-image:latest2", sts.Spec.Template.Spec.Containers[0].Image)
 }

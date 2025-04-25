@@ -3,6 +3,7 @@ package reconciler_test
 import (
 	"context"
 	"lavinmq-operator/internal/reconciler"
+	testutils "lavinmq-operator/internal/test_utils"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -25,7 +26,12 @@ func verifyConfigMapEquality(t *testing.T, configMap *corev1.ConfigMap, expected
 }
 
 func TestDefaultConfig(t *testing.T) {
-	instance := defaultInstance.DeepCopy()
+	t.Parallel()
+	instance := testutils.GetDefaultInstance(&testutils.DefaultInstanceSettings{})
+	err := testutils.CreateNamespace(t.Context(), k8sClient, instance.Namespace)
+	assert.NoErrorf(t, err, "Failed to create namespace")
+	defer testutils.DeleteNamespace(t.Context(), k8sClient, instance.Namespace)
+
 	defer k8sClient.Delete(t.Context(), instance)
 
 	rc := &reconciler.ConfigReconciler{
@@ -63,14 +69,19 @@ func TestDefaultConfig(t *testing.T) {
 	rc.Reconcile(context.Background())
 
 	configMap := &corev1.ConfigMap{}
-	err := k8sClient.Get(t.Context(), types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, configMap)
+	err = k8sClient.Get(t.Context(), types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, configMap)
 	assert.NoError(t, err)
-	assert.Equal(t, configMap.Name, instance.Name)
+	assert.Equal(t, instance.Name, configMap.Name)
 	verifyConfigMapEquality(t, configMap, expectedConfig)
 }
 
 func TestCustomConfigPorts(t *testing.T) {
-	instance := defaultInstance.DeepCopy()
+	t.Parallel()
+	instance := testutils.GetDefaultInstance(&testutils.DefaultInstanceSettings{})
+	err := testutils.CreateNamespace(t.Context(), k8sClient, instance.Namespace)
+	assert.NoErrorf(t, err, "Failed to create namespace")
+	defer testutils.DeleteNamespace(t.Context(), k8sClient, instance.Namespace)
+
 	defer k8sClient.Delete(t.Context(), instance)
 
 	instance.Spec.Config.Amqp.Port = 1111
@@ -113,14 +124,19 @@ func TestCustomConfigPorts(t *testing.T) {
 
 	rc.Reconcile(t.Context())
 	configMap := &corev1.ConfigMap{}
-	err := k8sClient.Get(t.Context(), types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, configMap)
+	err = k8sClient.Get(t.Context(), types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, configMap)
 	assert.NoError(t, err)
-	assert.Equal(t, configMap.Name, instance.Name)
+	assert.Equal(t, instance.Name, configMap.Name)
 	verifyConfigMapEquality(t, configMap, expectedConfig)
 }
 
 func TestDisablingNonTlsPorts(t *testing.T) {
-	instance := defaultInstance.DeepCopy()
+	t.Parallel()
+	instance := testutils.GetDefaultInstance(&testutils.DefaultInstanceSettings{})
+	err := testutils.CreateNamespace(t.Context(), k8sClient, instance.Namespace)
+	assert.NoErrorf(t, err, "Failed to create namespace")
+	defer testutils.DeleteNamespace(t.Context(), k8sClient, instance.Namespace)
+
 	defer k8sClient.Delete(t.Context(), instance)
 
 	instance.Spec.Config.Amqp.Port = -1
@@ -160,8 +176,8 @@ func TestDisablingNonTlsPorts(t *testing.T) {
 	rc.Reconcile(t.Context())
 
 	configMap := &corev1.ConfigMap{}
-	err := k8sClient.Get(t.Context(), types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, configMap)
+	err = k8sClient.Get(t.Context(), types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, configMap)
 	assert.NoError(t, err)
-	assert.Equal(t, configMap.Name, instance.Name)
+	assert.Equal(t, instance.Name, configMap.Name)
 	verifyConfigMapEquality(t, configMap, expectedConfig)
 }
