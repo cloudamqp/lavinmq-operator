@@ -7,15 +7,15 @@ metadata:
     app: lavinmq-sample
   name: lavinmq-sample
 spec:
-  image: cloudamqp/lavinmq:2.2.0
-  replicas: 1
+  image: cloudamqp/lavinmq:2.3.0
+  replicas: 3
   resources:
     requests:
       cpu: 500m
       memory: 128Mi
     limits:
       cpu: 2000m
-      memory: 512Mi
+      memory: 256Mi
   etcdEndpoints:
     - etcd-cluster-0.etcd-cluster.default.svc.cluster.local:2379
     - etcd-cluster-1.etcd-cluster.default.svc.cluster.local:2379
