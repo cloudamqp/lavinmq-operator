@@ -3,6 +3,7 @@ package reconciler_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -43,29 +44,18 @@ func TestStatefulSetReconciler(t *testing.T) {
 	}
 
 	err := k8sClient.Create(t.Context(), instance)
-
-	if err != nil {
-		t.Fatalf("Failed to create instance: %v", err)
-	}
+	assert.NoErrorf(t, err, "Failed to create instance")
 
 	instance.Spec.Image = "test-image:latest2"
 	err = k8sClient.Update(t.Context(), instance)
-	if err != nil {
-		t.Fatalf("Failed to update instance: %v", err)
-	}
+	assert.NoErrorf(t, err, "Failed to update instance")
 
 	_, err = rc.Reconcile(t.Context())
-	if err != nil {
-		t.Fatalf("Failed to reconcile instance: %v", err)
-	}
+	assert.NoErrorf(t, err, "Failed to reconcile instance")
 
 	sts := &appsv1.StatefulSet{}
 	err = k8sClient.Get(t.Context(), types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, sts)
-	if err != nil {
-		t.Fatalf("Failed to get statefulset: %v", err)
-	}
+	assert.NoErrorf(t, err, "Failed to get statefulset")
 
-	if sts.Spec.Template.Spec.Containers[0].Image != "test-image:latest2" {
-		t.Fatalf("Statefulset image not updated")
-	}
+	assert.Equal(t, sts.Spec.Template.Spec.Containers[0].Image, "test-image:latest2")
 }

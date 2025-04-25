@@ -27,9 +27,7 @@ func TestDefaultPVCReconciler(t *testing.T) {
 	}
 
 	err := k8sClient.Create(t.Context(), instance)
-	if err != nil {
-		t.Fatalf("Failed to create instance: %v", err)
-	}
+	assert.NoErrorf(t, err, "Failed to create instance")
 
 	defer cleanupPvcResources(t, instance)
 
@@ -57,17 +55,16 @@ func TestNoChangesToPVC(t *testing.T) {
 	}
 
 	err := k8sClient.Create(t.Context(), instance)
-	if err != nil {
-		t.Fatalf("Failed to create instance: %v", err)
-	}
+	assert.NoErrorf(t, err, "Failed to create instance")
+
+	defer cleanupPvcResources(t, instance)
+
 	_, err = rc.Reconcile(t.Context())
 	assert.NoError(t, err)
 
 	createdPvc := &corev1.PersistentVolumeClaim{}
 	err = k8sClient.Get(t.Context(), types.NamespacedName{Name: fmt.Sprintf("data-%s-0", instance.Name), Namespace: instance.Namespace}, createdPvc)
 	assert.NoError(t, err)
-
-	defer cleanupPvcResources(t, instance)
 
 	_, err = rc.Reconcile(t.Context())
 	assert.NoError(t, err)
@@ -185,14 +182,10 @@ func cleanupPvcResources(t *testing.T, instance *v1alpha1.LavinMQ) {
 		}
 
 		err = k8sClient.Get(t.Context(), types.NamespacedName{Name: fmt.Sprintf("data-%s-%d", instance.Name, i), Namespace: instance.Namespace}, pvc)
-		if err != nil {
-			t.Fatalf("Failed to get PVC: %v", err)
-		}
+		assert.NoErrorf(t, err, "Failed to get PVC")
 		pvc.Finalizers = nil
 		err = k8sClient.Update(t.Context(), pvc)
-		if err != nil {
-			t.Fatalf("Failed to update PVC: %v", err)
-		}
+		assert.NoErrorf(t, err, "Failed to update PVC")
 
 		err = k8sClient.Delete(t.Context(), pvc)
 		if err != nil {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"lavinmq-operator/test/utils"
+	"log"
 	"os"
 	"os/exec"
 	"testing"
@@ -35,7 +36,7 @@ func TestMain(m *testing.M) {
 	// Setup test environment
 	testEnv.Setup(
 		func(ctx context.Context, cfg *envconf.Config) (context.Context, error) {
-			fmt.Println("Creating kind cluster...")
+			log.Println("Creating kind cluster...")
 			return envfuncs.CreateClusterWithOpts(
 				kindCluster,
 				kindClusterName,
@@ -44,7 +45,7 @@ func TestMain(m *testing.M) {
 		},
 
 		func(ctx context.Context, cfg *envconf.Config) (context.Context, error) {
-			fmt.Println("Creating test namespace...")
+			log.Println("Creating test namespace...")
 			_, err := envfuncs.CreateNamespace(namespace)(ctx, cfg)
 			if err != nil {
 				return ctx, fmt.Errorf("failed to create namespace: %w", err)
@@ -53,7 +54,7 @@ func TestMain(m *testing.M) {
 		},
 
 		func(ctx context.Context, cfg *envconf.Config) (context.Context, error) {
-			fmt.Println("Installing etcd operator...")
+			log.Println("Installing etcd operator...")
 			err := utils.InstallEtcdOperator()
 			if err != nil {
 				return ctx, fmt.Errorf("failed to install etcd operator: %w", err)
@@ -61,7 +62,7 @@ func TestMain(m *testing.M) {
 			return ctx, nil
 		},
 		func(ctx context.Context, cfg *envconf.Config) (context.Context, error) {
-			fmt.Println("Starting etcd cluster...")
+			log.Println("Starting etcd cluster...")
 			err := utils.SetupEtcdCluster(namespace)
 			if err != nil {
 				return ctx, fmt.Errorf("failed to setup etcd cluster: %w", err)
@@ -69,7 +70,7 @@ func TestMain(m *testing.M) {
 			return ctx, nil
 		},
 		func(ctx context.Context, cfg *envconf.Config) (context.Context, error) {
-			fmt.Println("Building and installing the operator...")
+			log.Println("Building and installing the operator...")
 			err := utils.BuildingAndInstallingOperator(projectimage, kindClusterName)
 			if err != nil {
 				return ctx, fmt.Errorf("failed to build and install operator: %w", err)
@@ -81,34 +82,34 @@ func TestMain(m *testing.M) {
 	// Cleanup
 	testEnv.Finish(
 		func(ctx context.Context, c *envconf.Config) (context.Context, error) {
-			fmt.Println("Undeploying LavinMQ controller...")
+			log.Println("Undeploying LavinMQ controller...")
 			cmd := exec.Command("make", "undeploy", "ignore-not-found=true")
 			if _, err := utils.Run(cmd); err != nil {
-				fmt.Printf("Warning: Failed to undeploy controller: %s\n", err)
+				log.Printf("Warning: Failed to undeploy controller: %s\n", err)
 			}
 
-			fmt.Println("Uninstalling crd...")
+			log.Println("Uninstalling crd...")
 			cmd = exec.Command("make", "uninstall", "ignore-not-found=true")
 			if _, err := utils.Run(cmd); err != nil {
-				fmt.Printf("Warning: Failed to install crd: %s\n", err)
+				log.Printf("Warning: Failed to install crd: %s\n", err)
 			}
 			return ctx, nil
 		},
 		func(ctx context.Context, cfg *envconf.Config) (context.Context, error) {
-			fmt.Println("Uninstalling etcd operator...")
+			log.Println("Uninstalling etcd operator...")
 			utils.UninstallEtcdOperator()
 			return ctx, nil
 		},
 		func(ctx context.Context, cfg *envconf.Config) (context.Context, error) {
-			fmt.Println("Removing test namespace...")
+			log.Println("Removing test namespace...")
 			ctx, err := envfuncs.DeleteNamespace(namespace)(ctx, cfg)
 			if err != nil {
-				fmt.Printf("Failed to delete namespace: %s\n", err)
+				log.Printf("Failed to delete namespace: %s\n", err)
 			}
 			return ctx, nil
 		},
 		func(ctx context.Context, cfg *envconf.Config) (context.Context, error) {
-			fmt.Println("Destroying kind cluster...")
+			log.Println("Destroying kind cluster...")
 			return envfuncs.DestroyCluster(kindClusterName)(ctx, cfg)
 		},
 	)

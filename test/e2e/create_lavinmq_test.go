@@ -10,6 +10,7 @@ import (
 
 	cloudamqpcomv1alpha1 "lavinmq-operator/api/v1alpha1"
 
+	"github.com/stretchr/testify/assert"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -34,16 +35,12 @@ func TestCreateLavinMQ(t *testing.T) {
 	feature := features.New("Create LavinMQ").
 		Setup(func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
 			r, err := resources.New(cfg.Client().RESTConfig())
-			if err != nil {
-				t.Fail()
-			}
+			assert.NoError(t, err)
 
 			err = cloudamqpcomv1alpha1.AddToScheme(r.GetScheme())
-			if err != nil {
-				t.Fail()
-			}
+			assert.NoError(t, err)
 
-			fmt.Println("Trying to create LavinMQ in namespace", namespace)
+			t.Logf("Trying to create LavinMQ in namespace %s", namespace)
 			r.WithNamespace(namespace)
 
 			lavinmq := &cloudamqpcomv1alpha1.LavinMQ{
@@ -82,31 +79,21 @@ func TestCreateLavinMQ(t *testing.T) {
 			}
 
 			err = r.Create(ctx, lavinmq)
-			if err != nil {
-				fmt.Println(err)
-				t.Fail()
-			}
+			assert.NoErrorf(t, err, "Failed to create LavinMQ")
 
 			err = r.Get(ctx, lavinmq.ObjectMeta.GetName(), namespace, lavinmq)
-			if err != nil {
-				fmt.Println("Failed to get LavinMQ", err)
-				t.Fail()
-			}
+			assert.NoErrorf(t, err, "Failed to get LavinMQ")
 
 			return ctx
 		}).
 		Assess("Check if LavinMQ starts", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
 			r, err := resources.New(cfg.Client().RESTConfig())
-			if err != nil {
-				t.Fail()
-			}
+			assert.NoError(t, err)
 
 			r.WithNamespace(namespace)
 
 			err = cloudamqpcomv1alpha1.AddToScheme(r.GetScheme())
-			if err != nil {
-				t.Fail()
-			}
+			assert.NoError(t, err)
 
 			lavinmqSts := &appsv1.StatefulSet{}
 
@@ -114,20 +101,14 @@ func TestCreateLavinMQ(t *testing.T) {
 				err := r.Get(ctx, instanceName, namespace, lavinmqSts)
 				return err == nil
 			}), wait.WithTimeout(time.Minute), wait.WithInterval(time.Second*5))
-			// err = r.Get(ctx, instanceName, namespace, lavinmqSts)
-			if err != nil {
-				fmt.Println("Failed to get LavinMQ StatefulSet", err)
-				t.Fail()
-			}
+
+			assert.NoErrorf(t, err, "Failed to get LavinMQ StatefulSet")
 
 			err = wait.For(conditions.New(r).ResourceScaled(lavinmqSts, func(object k8s.Object) int32 {
 				return lavinmqSts.Status.ReadyReplicas
 			}, 1), wait.WithTimeout(time.Minute), wait.WithInterval(time.Second*5))
 
-			if err != nil {
-				fmt.Println("LavinMQ StatefulSet is not scaled", err)
-				t.Fail()
-			}
+			assert.NoErrorf(t, err, "Failed to scale LavinMQ StatefulSet")
 
 			lavinPod := &corev1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
@@ -137,27 +118,17 @@ func TestCreateLavinMQ(t *testing.T) {
 			}
 
 			err = r.Get(ctx, lavinPod.ObjectMeta.GetName(), namespace, lavinPod)
-			if err != nil {
-				fmt.Println("Failed to get LavinMQ pod", err)
-				t.Fail()
-			}
+			assert.NoErrorf(t, err, "Failed to get LavinMQ pod")
 
 			err = wait.For(conditions.New(r).PodRunning(lavinPod), wait.WithTimeout(time.Minute), wait.WithInterval(time.Second*5))
-			if err != nil {
-				fmt.Println("LavinMQ pod is not running", err)
-				t.Fail()
-			}
+			assert.NoErrorf(t, err, "Failed to wait for LavinMQ pod to be running")
 
 			var stdout, stderr bytes.Buffer
 			err = r.ExecInPod(ctx, namespace, lavinPod.Name, lavinPod.Spec.Containers[0].Name, []string{"lavinmqctl", "status"}, &stdout, &stderr)
-			if err != nil {
-				fmt.Println("Failed to execute lavinmqctl status", err)
-				t.Fail()
-			}
+			assert.NoErrorf(t, err, "Failed to execute lavinmqctl status", stderr.String())
 
 			if !strings.Contains(stdout.String(), fmt.Sprintf("%s-0", instanceName)) {
-				fmt.Println("LavinMQ is not running", stdout.String())
-				t.Fail()
+				assert.FailNowf(t, "LavinMQ is not running", stdout.String())
 			}
 
 			return ctx

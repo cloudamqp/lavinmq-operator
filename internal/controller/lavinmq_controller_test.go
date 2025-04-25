@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -44,12 +45,8 @@ func TestNonExistentLavinMQ(t *testing.T) {
 		},
 	})
 
-	if err != nil {
-		t.Errorf("Expected no error, got %v", err)
-	}
-	if result != (reconcile.Result{}) {
-		t.Errorf("Expected empty result, got %v", result)
-	}
+	assert.NoError(t, err)
+	assert.Equal(t, result, reconcile.Result{})
 }
 
 func TestDefaultLavinMQ(t *testing.T) {
@@ -58,9 +55,7 @@ func TestDefaultLavinMQ(t *testing.T) {
 	defer cleanupResources(t, lavinmq)
 
 	err := k8sClient.Create(t.Context(), lavinmq)
-	if err != nil {
-		t.Errorf("Failed to create LavinMQ resource: %v", err)
-	}
+	assert.NoErrorf(t, err, "Failed to create LavinMQ resource")
 
 	resource := &cloudamqpcomv1alpha1.LavinMQ{}
 	err = k8sClient.Get(t.Context(), types.NamespacedName{
@@ -68,17 +63,10 @@ func TestDefaultLavinMQ(t *testing.T) {
 		Namespace: "default",
 	}, resource)
 
-	if err != nil {
-		t.Fatalf("Failed to get LavinMQ resource: %v", err)
-	}
+	assert.NoErrorf(t, err, "Failed to get LavinMQ resource")
 
-	if resource.Spec.Image != "cloudamqp/lavinmq:2.2.0" {
-		t.Errorf("Expected image 'cloudamqp/lavinmq:2.2.0', got '%s'", resource.Spec.Image)
-	}
-
-	if resource.Spec.Replicas != 1 {
-		t.Errorf("Expected replicas 1, got %d", resource.Spec.Replicas)
-	}
+	assert.Equal(t, resource.Spec.Image, "cloudamqp/lavinmq:2.2.0")
+	assert.Equal(t, resource.Spec.Replicas, int32(1))
 }
 
 func TestCreatingCustomLavinMQ(t *testing.T) {
@@ -94,22 +82,16 @@ func TestCreatingCustomLavinMQ(t *testing.T) {
 
 		defer cleanupResources(t, copy)
 
-		if err != nil {
-			t.Errorf("Failed to create LavinMQ resource: %v", err)
-		}
+		assert.NoErrorf(t, err, "Failed to create LavinMQ resource")
 
 		resource := &cloudamqpcomv1alpha1.LavinMQ{}
 		err = k8sClient.Get(t.Context(), types.NamespacedName{
 			Name:      copy.Name,
 			Namespace: copy.Namespace,
 		}, resource)
-		if err != nil {
-			t.Errorf("Failed to get LavinMQ resource: %v", err)
-		}
 
-		if resource.Spec.Config.Amqp.Port != 1337 {
-			t.Errorf("Expected port 1337, got %d", resource.Spec.Config.Amqp.Port)
-		}
+		assert.NoErrorf(t, err, "Failed to get LavinMQ resource")
+		assert.Equal(t, resource.Spec.Config.Amqp.Port, int32(1337))
 	})
 	t.Run("Custom Image", func(t *testing.T) {
 		copy := lavinmq.DeepCopy()
@@ -119,22 +101,17 @@ func TestCreatingCustomLavinMQ(t *testing.T) {
 
 		defer cleanupResources(t, copy)
 
-		if err != nil {
-			t.Errorf("Failed to create LavinMQ resource: %v", err)
-		}
+		assert.NoErrorf(t, err, "Failed to create LavinMQ resource")
 
 		resource := &cloudamqpcomv1alpha1.LavinMQ{}
 		err = k8sClient.Get(t.Context(), types.NamespacedName{
 			Name:      copy.Name,
 			Namespace: copy.Namespace,
 		}, resource)
-		if err != nil {
-			t.Fatalf("Failed to get LavinMQ resource: %v", err)
-		}
 
-		if resource.Spec.Image != "cloudamqp/lavinmq:2.3.0" {
-			t.Errorf("Expected image 'cloudamqp/lavinmq:2.3.0', got '%s'", resource.Spec.Image)
-		}
+		assert.NoErrorf(t, err, "Failed to get LavinMQ resource")
+
+		assert.Equal(t, resource.Spec.Image, "cloudamqp/lavinmq:2.3.0")
 	})
 
 	t.Run("Custom Replicas", func(t *testing.T) {
@@ -145,9 +122,7 @@ func TestCreatingCustomLavinMQ(t *testing.T) {
 
 		defer cleanupResources(t, copy)
 
-		if err != nil {
-			t.Errorf("Failed to create LavinMQ resource: %v", err)
-		}
+		assert.NoErrorf(t, err, "Failed to create LavinMQ resource")
 
 		resource := &cloudamqpcomv1alpha1.LavinMQ{}
 		err = k8sClient.Get(t.Context(), types.NamespacedName{
@@ -155,13 +130,9 @@ func TestCreatingCustomLavinMQ(t *testing.T) {
 			Namespace: copy.Namespace,
 		}, resource)
 
-		if err != nil {
-			t.Fatalf("Failed to get LavinMQ resource: %v", err)
-		}
+		assert.NoErrorf(t, err, "Failed to get LavinMQ resource")
 
-		if resource.Spec.Replicas != 3 {
-			t.Errorf("Expected replicas 3, got %d", resource.Spec.Replicas)
-		}
+		assert.Equal(t, resource.Spec.Replicas, int32(3))
 	})
 }
 
@@ -175,9 +146,7 @@ func TestUpdatingLavinMQ(t *testing.T) {
 		copy.Name = "test-resource-updating-port"
 		err := k8sClient.Create(t.Context(), copy)
 
-		if err != nil {
-			t.Errorf("Failed to create LavinMQ resource: %v", err)
-		}
+		assert.NoErrorf(t, err, "Failed to create LavinMQ resource")
 
 		defer cleanupResources(t, copy)
 
@@ -188,9 +157,7 @@ func TestUpdatingLavinMQ(t *testing.T) {
 			},
 		})
 
-		if err != nil {
-			t.Errorf("Failed to reconcile: %v", err)
-		}
+		assert.NoErrorf(t, err, "Failed to reconcile")
 
 		copy.Spec.Config.Amqp.Port = 1337
 		if err := k8sClient.Update(t.Context(), copy); err != nil {
@@ -223,14 +190,10 @@ func TestUpdatingLavinMQ(t *testing.T) {
 			{ContainerPort: 1883, Name: "mqtt", Protocol: "TCP"},
 		}
 
-		if len(resource.Spec.Template.Spec.Containers[0].Ports) != len(expectedPorts) {
-			t.Errorf("Expected %d ports, got %d", len(expectedPorts), len(resource.Spec.Template.Spec.Containers[0].Ports))
-		}
+		assert.Len(t, resource.Spec.Template.Spec.Containers[0].Ports, len(expectedPorts))
 
 		for i, port := range expectedPorts {
-			if resource.Spec.Template.Spec.Containers[0].Ports[i] != port {
-				t.Errorf("Expected port %v, got %v", port, resource.Spec.Template.Spec.Containers[0].Ports[i])
-			}
+			assert.Equal(t, resource.Spec.Template.Spec.Containers[0].Ports[i], port)
 		}
 	})
 
@@ -241,9 +204,7 @@ func TestUpdatingLavinMQ(t *testing.T) {
 
 		defer cleanupResources(t, copy)
 
-		if err != nil {
-			t.Errorf("Failed to create LavinMQ resource: %v", err)
-		}
+		assert.NoErrorf(t, err, "Failed to create LavinMQ resource")
 
 		_, err = reconciler.Reconcile(t.Context(), reconcile.Request{
 			NamespacedName: types.NamespacedName{
@@ -252,14 +213,11 @@ func TestUpdatingLavinMQ(t *testing.T) {
 			},
 		})
 
-		if err != nil {
-			t.Errorf("Failed to reconcile: %v", err)
-		}
+		assert.NoErrorf(t, err, "Failed to reconcile")
 
 		copy.Spec.Image = "cloudamqp/lavinmq:2.3.0"
-		if err := k8sClient.Update(t.Context(), copy); err != nil {
-			t.Errorf("Failed to update LavinMQ resource: %v", err)
-		}
+		err = k8sClient.Update(t.Context(), copy)
+		assert.NoErrorf(t, err, "Failed to update LavinMQ resource")
 
 		_, err = reconciler.Reconcile(t.Context(), reconcile.Request{
 			NamespacedName: types.NamespacedName{
@@ -268,9 +226,7 @@ func TestUpdatingLavinMQ(t *testing.T) {
 			},
 		})
 
-		if err != nil {
-			t.Errorf("Failed to reconcile: %v", err)
-		}
+		assert.NoErrorf(t, err, "Failed to reconcile")
 
 		resource := &appsv1.StatefulSet{}
 		err = k8sClient.Get(t.Context(), types.NamespacedName{
@@ -278,13 +234,9 @@ func TestUpdatingLavinMQ(t *testing.T) {
 			Namespace: copy.Namespace,
 		}, resource)
 
-		if err != nil {
-			t.Errorf("Failed to get StatefulSet: %v", err)
-		}
+		assert.NoErrorf(t, err, "Failed to get StatefulSet")
 
-		if resource.Spec.Template.Spec.Containers[0].Image != "cloudamqp/lavinmq:2.3.0" {
-			t.Errorf("Expected image 'cloudamqp/lavinmq:2.3.0', got '%s'", resource.Spec.Template.Spec.Containers[0].Image)
-		}
+		assert.Equal(t, resource.Spec.Template.Spec.Containers[0].Image, "cloudamqp/lavinmq:2.3.0")
 	})
 
 }
@@ -326,9 +278,8 @@ func cleanupResources(t *testing.T, lavinmq *cloudamqpcomv1alpha1.LavinMQ) {
 		Namespace: namespace,
 	}, sts)
 	if err == nil {
-		if err := k8sClient.Delete(t.Context(), sts); err != nil {
-			t.Errorf("Failed to delete StatefulSet: %v", err)
-		}
+		err = k8sClient.Delete(t.Context(), sts)
+		assert.NoErrorf(t, err, "Failed to delete StatefulSet")
 	}
 
 	// Clean up ConfigMap
@@ -338,9 +289,8 @@ func cleanupResources(t *testing.T, lavinmq *cloudamqpcomv1alpha1.LavinMQ) {
 		Namespace: namespace,
 	}, configMap)
 	if err == nil {
-		if err := k8sClient.Delete(t.Context(), configMap); err != nil {
-			t.Errorf("Failed to delete ConfigMap: %v", err)
-		}
+		err = k8sClient.Delete(t.Context(), configMap)
+		assert.NoErrorf(t, err, "Failed to delete ConfigMap")
 	}
 
 	// Clean up LavinMQ
@@ -350,8 +300,7 @@ func cleanupResources(t *testing.T, lavinmq *cloudamqpcomv1alpha1.LavinMQ) {
 		Namespace: namespace,
 	}, resource)
 	if err == nil {
-		if err := k8sClient.Delete(t.Context(), resource); err != nil {
-			t.Errorf("Failed to delete LavinMQ resource: %v", err)
-		}
+		err = k8sClient.Delete(t.Context(), resource)
+		assert.NoErrorf(t, err, "Failed to delete LavinMQ resource")
 	}
 }
