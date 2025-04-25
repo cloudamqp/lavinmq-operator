@@ -39,6 +39,9 @@ type LavinMQSpec struct {
 	// +optional
 	Replicas int32 `json:"replicas,omitempty"`
 
+	// +optional
+	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
+
 	// Will override the accessmode and force it to ReadWriteOnce
 	// +required
 	DataVolumeClaimSpec corev1.PersistentVolumeClaimSpec `json:"dataVolumeClaim"`

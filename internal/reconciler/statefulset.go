@@ -85,11 +85,12 @@ func (b *StatefulSetReconciler) appendSpec(sts *appsv1.StatefulSet) *appsv1.Stat
 			Spec: corev1.PodSpec{
 				Containers: []corev1.Container{
 					{
-						Name:    "lavinmq",
-						Image:   b.Instance.Spec.Image,
-						Command: []string{"/usr/bin/lavinmq"},
-						Args:    b.cliArgs(),
-						Ports:   b.portsFromSpec(),
+						Name:      "lavinmq",
+						Image:     b.Instance.Spec.Image,
+						Resources: b.Instance.Spec.Resources,
+						Command:   []string{"/usr/bin/lavinmq"},
+						Args:      b.cliArgs(),
+						Ports:     b.portsFromSpec(),
 						VolumeMounts: []corev1.VolumeMount{
 							{
 								Name:      "data",
@@ -256,6 +257,11 @@ func (b *StatefulSetReconciler) diffTemplate(old *corev1.PodSpec) {
 
 	if oldContainer.Image != b.Instance.Spec.Image {
 		oldContainer.Image = b.Instance.Spec.Image
+	}
+
+	if !reflect.DeepEqual(oldContainer.Resources, b.Instance.Spec.Resources) {
+		b.Logger.Info("Container resources changed, updating")
+		oldContainer.Resources = b.Instance.Spec.Resources
 	}
 
 	cliArgs := b.cliArgs()
