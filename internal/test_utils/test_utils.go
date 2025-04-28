@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"runtime"
 
 	"lavinmq-operator/api/v1alpha1"
@@ -66,6 +67,7 @@ type DefaultInstanceSettings struct {
 	Replicas  *int32
 	Storage   *string
 	Image     *string
+	Resources corev1.ResourceRequirements
 }
 
 func GetDefaultInstance(settings *DefaultInstanceSettings) *cloudamqpcomv1alpha1.LavinMQ {
@@ -75,6 +77,7 @@ func GetDefaultInstance(settings *DefaultInstanceSettings) *cloudamqpcomv1alpha1
 	defaultReplicas := int32(1) // Need to explicitly cast int to int32
 	defaultStorage := "10Gi"
 	defaultImage := "cloudamqp/lavinmq:2.3.0"
+	defaultResources := corev1.ResourceRequirements{}
 	// --- --- --- --- --
 
 	instanceName := defaultName
@@ -102,13 +105,18 @@ func GetDefaultInstance(settings *DefaultInstanceSettings) *cloudamqpcomv1alpha1
 		instanceImage = *settings.Image
 	}
 
+	if !reflect.DeepEqual(settings.Resources, corev1.ResourceRequirements{}) {
+		defaultResources = settings.Resources
+	}
+
 	return &v1alpha1.LavinMQ{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      instanceName,
 			Namespace: instanceNamespace,
 		},
 		Spec: v1alpha1.LavinMQSpec{
-			Image: instanceImage,
+			Image:     instanceImage,
+			Resources: defaultResources,
 			DataVolumeClaimSpec: corev1.PersistentVolumeClaimSpec{
 				AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
 				Resources: corev1.VolumeResourceRequirements{
