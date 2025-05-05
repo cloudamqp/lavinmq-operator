@@ -12,6 +12,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
@@ -28,27 +29,28 @@ func (reconciler *ResourceReconciler) StatefulSetReconciler() *StatefulSetReconc
 func (b *StatefulSetReconciler) Reconcile(ctx context.Context) (ctrl.Result, error) {
 	statefulset := b.newObject()
 
-	err := b.GetItem(ctx, statefulset)
-	if err != nil {
-		if apierrors.IsNotFound(err) {
-			b.CreateItem(ctx, statefulset)
-			return ctrl.Result{}, nil
+	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		err := b.GetItem(ctx, statefulset)
+		if err != nil {
+			if apierrors.IsNotFound(err) {
+				b.CreateItem(ctx, statefulset)
+				return nil
+			}
+
+			return err
 		}
 
-		return ctrl.Result{}, err
-	}
+		b.updateFields(ctx, statefulset)
 
-	err = b.updateFields(ctx, statefulset)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
+		err = b.Client.Update(ctx, statefulset)
+		if err != nil {
+			return err
+		}
 
-	err = b.Client.Update(ctx, statefulset)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
+		return nil
+	})
 
-	return ctrl.Result{}, nil
+	return ctrl.Result{}, err
 }
 
 func (b *StatefulSetReconciler) newObject() *appsv1.StatefulSet {
@@ -232,23 +234,14 @@ func (b *StatefulSetReconciler) appendTlsConfig(sts *appsv1.StatefulSet) {
 	)
 }
 
-func (b *StatefulSetReconciler) updateFields(ctx context.Context, sts *appsv1.StatefulSet) error {
-	logger := b.Logger
-
-	//	'replicas', 'ordinals', 'template', 'updateStrategy',
-	// 'persistentVolumeClaimRetentionPolicy' and 'minReadySeconds',
-
+func (b *StatefulSetReconciler) updateFields(ctx context.Context, sts *appsv1.StatefulSet) {
 	if *sts.Spec.Replicas != int32(b.Instance.Spec.Replicas) {
-		logger.Info("Replicas changed", "old", sts.Spec.Replicas, "new", b.Instance.Spec.Replicas)
+		b.Logger.Info("Replicas changed", "old", sts.Spec.Replicas, "new", b.Instance.Spec.Replicas)
 		// TODO: Add support for scaling.
 		sts.Spec.Replicas = &b.Instance.Spec.Replicas
 	}
 
 	b.diffTemplate(&sts.Spec.Template.Spec)
-
-	// TODO: Do we need to do a disk check here now that we have a PVC?
-
-	return nil
 }
 
 func (b *StatefulSetReconciler) diffTemplate(old *corev1.PodSpec) {
