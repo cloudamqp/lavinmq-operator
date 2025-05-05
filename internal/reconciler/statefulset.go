@@ -7,6 +7,7 @@ import (
 	"slices"
 
 	"lavinmq-operator/internal/controller/utils"
+	resource_utils "lavinmq-operator/internal/reconciler/utils"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -259,7 +260,7 @@ func (b *StatefulSetReconciler) diffTemplate(old *corev1.PodSpec) {
 		oldContainer.Image = b.Instance.Spec.Image
 	}
 
-	if !reflect.DeepEqual(oldContainer.Resources, b.Instance.Spec.Resources) {
+	if !resource_utils.EqualResourceRequirements(oldContainer.Resources, b.Instance.Spec.Resources) {
 		b.Logger.Info("Container resources changed, updating")
 		oldContainer.Resources = b.Instance.Spec.Resources
 	}
