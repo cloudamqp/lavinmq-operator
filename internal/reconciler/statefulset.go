@@ -44,7 +44,7 @@ func (b *StatefulSetReconciler) Reconcile(ctx context.Context) (ctrl.Result, err
 
 		err = b.Client.Update(ctx, statefulset)
 		if err != nil {
-                         b.Logger.warn("Failed updating statefulset something something, trying again?")
+                         b.Logger.Error("Failed updating statefulset something something, trying again?")
 			return err
 		}
 
