@@ -198,7 +198,7 @@ func (b *StatefulSetReconciler) cliArgs() []string {
 	if b.Instance.Spec.Replicas > 0 {
 		// Clustering config is currently spread between CLI here and in the config file.
 		clusteringArgs := []string{
-			fmt.Sprintf("--clustering-advertised-uri=tcp://$(POD_NAME).%s-service.$(POD_NAMESPACE).svc.cluster.local:5679", b.Instance.Name),
+			fmt.Sprintf("--clustering-advertised-uri=tcp://$(POD_NAME).%s.$(POD_NAMESPACE).svc.cluster.local:5679", b.Instance.Name),
 		}
 		defaultArgs = append(defaultArgs, clusteringArgs...)
 	}
