@@ -2,6 +2,8 @@ package reconciler
 
 import (
 	"context"
+	"crypto/md5"
+	"encoding/hex"
 	"fmt"
 	"reflect"
 	"slices"
@@ -28,7 +30,7 @@ func (reconciler *ResourceReconciler) StatefulSetReconciler() *StatefulSetReconc
 }
 
 func (b *StatefulSetReconciler) Reconcile(ctx context.Context) (ctrl.Result, error) {
-	statefulset := b.newObject()
+	statefulset := b.newObject(ctx)
 
 	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		err := b.GetItem(ctx, statefulset)
@@ -55,7 +57,7 @@ func (b *StatefulSetReconciler) Reconcile(ctx context.Context) (ctrl.Result, err
 	return ctrl.Result{}, err
 }
 
-func (b *StatefulSetReconciler) newObject() *appsv1.StatefulSet {
+func (b *StatefulSetReconciler) newObject(ctx context.Context) *appsv1.StatefulSet {
 	labels := utils.LabelsForLavinMQ(b.Instance)
 
 	sts := &appsv1.StatefulSet{
@@ -68,6 +70,7 @@ func (b *StatefulSetReconciler) newObject() *appsv1.StatefulSet {
 
 	b.appendSpec(sts)
 	b.appendTlsConfig(sts)
+	b.setConfigHashAnnotation(ctx, sts)
 
 	return sts
 }
@@ -236,6 +239,25 @@ func (b *StatefulSetReconciler) appendTlsConfig(sts *appsv1.StatefulSet) {
 	)
 }
 
+// Used to check if the configmap has changed and restarts the pods if there are any config changes by setting a annotation.
+func (b *StatefulSetReconciler) setConfigHashAnnotation(ctx context.Context, sts *appsv1.StatefulSet) {
+	configMap := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      b.Instance.Name,
+			Namespace: b.Instance.Namespace,
+		},
+	}
+
+	b.GetItem(ctx, configMap)
+
+	hash := md5.Sum([]byte(configMap.Data[ConfigFileName]))
+	if sts.Spec.Template.ObjectMeta.Annotations == nil {
+		sts.Spec.Template.ObjectMeta.Annotations = make(map[string]string)
+	}
+
+	sts.Spec.Template.ObjectMeta.Annotations["config-hash"] = hex.EncodeToString(hash[:])
+}
+
 func (b *StatefulSetReconciler) updateFields(ctx context.Context, sts *appsv1.StatefulSet) {
 	if *sts.Spec.Replicas != int32(b.Instance.Spec.Replicas) {
 		b.Logger.Info("Replicas changed", "old", sts.Spec.Replicas, "new", b.Instance.Spec.Replicas)
@@ -244,6 +266,7 @@ func (b *StatefulSetReconciler) updateFields(ctx context.Context, sts *appsv1.St
 	}
 
 	b.diffTemplate(&sts.Spec.Template.Spec)
+	b.setConfigHashAnnotation(ctx, sts)
 }
 
 func (b *StatefulSetReconciler) diffTemplate(old *corev1.PodSpec) {

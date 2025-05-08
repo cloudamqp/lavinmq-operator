@@ -18,6 +18,8 @@ type ConfigReconciler struct {
 	*ResourceReconciler
 }
 
+var ConfigFileName = "lavinmq.ini"
+
 var (
 	defaultConfig = `
 [main]
@@ -100,7 +102,7 @@ func (b *ConfigReconciler) newObject() (*corev1.ConfigMap, error) {
 		return nil, fmt.Errorf("failed to write cluster config: %w", err)
 	}
 
-	configMap.Data["lavinmq.ini"] = config.String()
+	configMap.Data[ConfigFileName] = config.String()
 	return configMap, nil
 }
 
@@ -233,8 +235,8 @@ func (b *ConfigReconciler) updateFields(_ context.Context, configMap *corev1.Con
 		return err
 	}
 
-	if !reflect.DeepEqual(configMap.Data["lavinmq.ini"], newConfigMap.Data["lavinmq.ini"]) {
-		configMap.Data["lavinmq.ini"] = newConfigMap.Data["lavinmq.ini"]
+	if !reflect.DeepEqual(configMap.Data[ConfigFileName], newConfigMap.Data[ConfigFileName]) {
+		configMap.Data[ConfigFileName] = newConfigMap.Data[ConfigFileName]
 	}
 
 	return nil

@@ -14,7 +14,7 @@ import (
 )
 
 func verifyConfigMapEquality(t *testing.T, configMap *corev1.ConfigMap, expectedConfig string) {
-	conf, _ := ini.Load([]byte(configMap.Data["lavinmq.ini"]))
+	conf, _ := ini.Load([]byte(configMap.Data[reconciler.ConfigFileName]))
 	expectedConf, _ := ini.Load([]byte(expectedConfig))
 
 	for _, section := range conf.Sections() {
