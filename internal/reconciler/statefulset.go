@@ -30,9 +30,13 @@ func (reconciler *ResourceReconciler) StatefulSetReconciler() *StatefulSetReconc
 }
 
 func (b *StatefulSetReconciler) Reconcile(ctx context.Context) (ctrl.Result, error) {
-	statefulset := b.newObject(ctx)
+	statefulset, err := b.newObject(ctx)
+	if err != nil {
+		b.Logger.Error(err, "Failed creating statefulset")
+		return ctrl.Result{}, err
+	}
 
-	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		err := b.GetItem(ctx, statefulset)
 		if err != nil {
 			if apierrors.IsNotFound(err) {
@@ -43,7 +47,11 @@ func (b *StatefulSetReconciler) Reconcile(ctx context.Context) (ctrl.Result, err
 			return err
 		}
 
-		b.updateFields(ctx, statefulset)
+		err = b.updateFields(ctx, statefulset)
+		if err != nil {
+			b.Logger.Error(err, "Failed updating statefulset")
+			return err
+		}
 
 		err = b.Client.Update(ctx, statefulset)
 		if err != nil {
@@ -57,7 +65,7 @@ func (b *StatefulSetReconciler) Reconcile(ctx context.Context) (ctrl.Result, err
 	return ctrl.Result{}, err
 }
 
-func (b *StatefulSetReconciler) newObject(ctx context.Context) *appsv1.StatefulSet {
+func (b *StatefulSetReconciler) newObject(ctx context.Context) (*appsv1.StatefulSet, error) {
 	labels := utils.LabelsForLavinMQ(b.Instance)
 
 	sts := &appsv1.StatefulSet{
@@ -70,9 +78,11 @@ func (b *StatefulSetReconciler) newObject(ctx context.Context) *appsv1.StatefulS
 
 	b.appendSpec(sts)
 	b.appendTlsConfig(sts)
-	b.setConfigHashAnnotation(ctx, sts)
+	if err := b.setConfigHashAnnotation(ctx, sts); err != nil {
+		return nil, err
+	}
 
-	return sts
+	return sts, nil
 }
 
 func (b *StatefulSetReconciler) appendSpec(sts *appsv1.StatefulSet) *appsv1.StatefulSet {
@@ -240,7 +250,7 @@ func (b *StatefulSetReconciler) appendTlsConfig(sts *appsv1.StatefulSet) {
 }
 
 // Used to check if the configmap has changed and restarts the pods if there are any config changes by setting a annotation.
-func (b *StatefulSetReconciler) setConfigHashAnnotation(ctx context.Context, sts *appsv1.StatefulSet) {
+func (b *StatefulSetReconciler) setConfigHashAnnotation(ctx context.Context, sts *appsv1.StatefulSet) error {
 	configMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      b.Instance.Name,
@@ -248,17 +258,29 @@ func (b *StatefulSetReconciler) setConfigHashAnnotation(ctx context.Context, sts
 		},
 	}
 
-	b.GetItem(ctx, configMap)
+	if err := b.GetItem(ctx, configMap); err != nil {
+		b.Logger.Error(err, "Failed to fetch ConfigMap", "name", configMap.Name, "namespace", configMap.Namespace)
+		return err
+	}
 
-	hash := md5.Sum([]byte(configMap.Data[ConfigFileName]))
+	data, exists := configMap.Data[ConfigFileName]
+	if !exists {
+		err := fmt.Errorf("ConfigMap is missing required key: %s", ConfigFileName)
+		b.Logger.Error(err, "ConfigMap is missing required key", "key", ConfigFileName, "name", configMap.Name, "namespace", configMap.Namespace)
+		return err
+	}
+
+	hash := md5.Sum([]byte(data))
 	if sts.Spec.Template.ObjectMeta.Annotations == nil {
 		sts.Spec.Template.ObjectMeta.Annotations = make(map[string]string)
 	}
 
 	sts.Spec.Template.ObjectMeta.Annotations["config-hash"] = hex.EncodeToString(hash[:])
+
+	return nil
 }
 
-func (b *StatefulSetReconciler) updateFields(ctx context.Context, sts *appsv1.StatefulSet) {
+func (b *StatefulSetReconciler) updateFields(ctx context.Context, sts *appsv1.StatefulSet) error {
 	if *sts.Spec.Replicas != int32(b.Instance.Spec.Replicas) {
 		b.Logger.Info("Replicas changed", "old", sts.Spec.Replicas, "new", b.Instance.Spec.Replicas)
 		// TODO: Add support for scaling.
@@ -266,7 +288,12 @@ func (b *StatefulSetReconciler) updateFields(ctx context.Context, sts *appsv1.St
 	}
 
 	b.diffTemplate(&sts.Spec.Template.Spec)
-	b.setConfigHashAnnotation(ctx, sts)
+
+	if err := b.setConfigHashAnnotation(ctx, sts); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (b *StatefulSetReconciler) diffTemplate(old *corev1.PodSpec) {
