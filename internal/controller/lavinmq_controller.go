@@ -105,44 +105,6 @@ func (r *LavinMQReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	return ctrl.Result{}, nil
 }
 
-// // RestartStatefulSet triggers a rolling restart of the StatefulSet by updating the restartedAt annotation
-// func (r *LavinMQReconciler) RestartStatefulSet(ctx context.Context, instance *cloudamqpcomv1alpha1.LavinMQ) error {
-// 	logger := log.FromContext(ctx)
-// 	logger.Info("Triggering rolling restart of StatefulSet", "name", instance.Name)
-
-// 	statefulset := &appsv1.StatefulSet{}
-// 	err := r.Get(ctx, types.NamespacedName{
-// 		Name:      instance.Name,
-// 		Namespace: instance.Namespace,
-// 	}, statefulset)
-// 	if err != nil {
-// 		if apierrors.IsNotFound(err) {
-// 			logger.Info("StatefulSet not found, skipping restart", "name", instance.Name)
-// 			return nil
-// 		}
-// 		logger.Error(err, "Failed to get StatefulSet", "name", instance.Name)
-// 		return err
-// 	}
-
-// 	// Initialize annotations if they don't exist
-// 	if statefulset.Spec.Template.ObjectMeta.Annotations == nil {
-// 		statefulset.Spec.Template.ObjectMeta.Annotations = make(map[string]string)
-// 	}
-
-// 	// Update the restartedAt annotation with current timestamp
-// 	statefulset.Spec.Template.ObjectMeta.Annotations["kubectl.kubernetes.io/restartedAt"] = time.Now().Format(time.RFC3339)
-
-// 	// Update the StatefulSet to trigger the rolling restart
-// 	err = r.Update(ctx, statefulset)
-// 	if err != nil {
-// 		logger.Error(err, "Failed to update StatefulSet for restart", "name", instance.Name)
-// 		return err
-// 	}
-
-// 	logger.Info("Successfully triggered rolling restart of StatefulSet", "name", instance.Name)
-// 	return nil
-// }
-
 // SetupWithManager sets up the controller with the Manager.
 func (r *LavinMQReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
