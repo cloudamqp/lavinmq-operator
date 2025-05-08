@@ -1,0 +1,52 @@
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: mutating-webhook-configuration
+webhooks:
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /mutate-cloudamqp-com-cloudamqp-com-v1alpha1-lavinmq
+  failurePolicy: Fail
+  name: mlavinmq.kb.io
+  rules:
+  - apiGroups:
+    - cloudamqp.com.cloudamqp.com
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - lavinmqs
+  sideEffects: None
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: validating-webhook-configuration
+webhooks:
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /validate-cloudamqp-com-cloudamqp-com-v1alpha1-lavinmq
+  failurePolicy: Fail
+  name: vlavinmq.kb.io
+  rules:
+  - apiGroups:
+    - cloudamqp.com.cloudamqp.com
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - lavinmqs
+  sideEffects: None
