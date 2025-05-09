@@ -20,8 +20,8 @@ import (
 	"context"
 	"fmt"
 
-	cloudamqpcomv1alpha1 "lavinmq-operator/api/v1alpha1"
-	"lavinmq-operator/internal/reconciler"
+	cloudamqpcomv1alpha1 "github.com/cloudamqp/lavinmq-operator/api/v1alpha1"
+	"github.com/cloudamqp/lavinmq-operator/internal/reconciler"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -48,9 +48,9 @@ type LavinMQReconciler struct {
 	Recorder record.EventRecorder
 }
 
-// +kubebuilder:rbac:groups=cloudamqp.com.cloudamqp.com,resources=lavinmqs,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=cloudamqp.com.cloudamqp.com,resources=lavinmqs/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=cloudamqp.com.cloudamqp.com,resources=lavinmqs/finalizers,verbs=update
+// +kubebuilder:rbac:groups=cloudamqp.com,resources=lavinmqs,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=cloudamqp.com,resources=lavinmqs/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=cloudamqp.com,resources=lavinmqs/finalizers,verbs=update
 // +kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=core,resources=configmaps,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=core,resources=services,verbs=get;list;watch;create;update;patch;delete

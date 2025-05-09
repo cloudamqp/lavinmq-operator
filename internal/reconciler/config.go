@@ -3,9 +3,10 @@ package reconciler
 import (
 	"context"
 	"fmt"
-	"lavinmq-operator/internal/controller/utils"
 	"reflect"
 	"strings"
+
+	"github.com/cloudamqp/lavinmq-operator/internal/controller/utils"
 
 	ini "gopkg.in/ini.v1"
 	corev1 "k8s.io/api/core/v1"

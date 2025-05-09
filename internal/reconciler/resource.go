@@ -2,7 +2,8 @@ package reconciler
 
 import (
 	"context"
-	cloudamqpcomv1alpha1 "lavinmq-operator/api/v1alpha1"
+
+	cloudamqpcomv1alpha1 "github.com/cloudamqp/lavinmq-operator/api/v1alpha1"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"

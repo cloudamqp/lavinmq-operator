@@ -2,9 +2,10 @@ package reconciler_test
 
 import (
 	"context"
-	"lavinmq-operator/internal/reconciler"
-	testutils "lavinmq-operator/internal/test_utils"
 	"testing"
+
+	"github.com/cloudamqp/lavinmq-operator/internal/reconciler"
+	testutils "github.com/cloudamqp/lavinmq-operator/internal/test_utils"
 
 	"github.com/stretchr/testify/assert"
 	ini "gopkg.in/ini.v1"

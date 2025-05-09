@@ -17,7 +17,7 @@ rules:
   - update
   - watch
 - apiGroups:
-  - cloudamqp.com.cloudamqp.com
+  - cloudamqp.com
   resources:
   - lavinmqs
   verbs:
@@ -29,13 +29,13 @@ rules:
   - update
   - watch
 - apiGroups:
-  - cloudamqp.com.cloudamqp.com
+  - cloudamqp.com
   resources:
   - lavinmqs/finalizers
   verbs:
   - update
 - apiGroups:
-  - cloudamqp.com.cloudamqp.com
+  - cloudamqp.com
   resources:
   - lavinmqs/status
   verbs:

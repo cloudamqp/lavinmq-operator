@@ -8,8 +8,8 @@ import (
 	"reflect"
 	"slices"
 
-	"lavinmq-operator/internal/controller/utils"
-	resource_utils "lavinmq-operator/internal/reconciler/utils"
+	"github.com/cloudamqp/lavinmq-operator/internal/controller/utils"
+	resource_utils "github.com/cloudamqp/lavinmq-operator/internal/reconciler/utils"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"

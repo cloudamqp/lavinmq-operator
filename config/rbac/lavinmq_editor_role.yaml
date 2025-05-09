@@ -3,25 +3,25 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   labels:
-    app.kubernetes.io/name: operator-sdk
+    app.kubernetes.io/name: lavinmq-operator
     app.kubernetes.io/managed-by: kustomize
   name: lavinmq-editor-role
 rules:
-- apiGroups:
-  - cloudamqp.com.cloudamqp.com
-  resources:
-  - lavinmqs
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - cloudamqp.com.cloudamqp.com
-  resources:
-  - lavinmqs/status
-  verbs:
-  - get
+  - apiGroups:
+      - cloudamqp.com
+    resources:
+      - lavinmqs
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - cloudamqp.com
+    resources:
+      - lavinmqs/status
+    verbs:
+      - get

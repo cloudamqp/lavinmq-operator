@@ -8,8 +8,7 @@ import (
 	"reflect"
 	"runtime"
 
-	"lavinmq-operator/api/v1alpha1"
-	cloudamqpcomv1alpha1 "lavinmq-operator/api/v1alpha1"
+	cloudamqpcomv1alpha1 "github.com/cloudamqp/lavinmq-operator/api/v1alpha1"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -109,12 +108,12 @@ func GetDefaultInstance(settings *DefaultInstanceSettings) *cloudamqpcomv1alpha1
 		defaultResources = settings.Resources
 	}
 
-	return &v1alpha1.LavinMQ{
+	return &cloudamqpcomv1alpha1.LavinMQ{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      instanceName,
 			Namespace: instanceNamespace,
 		},
-		Spec: v1alpha1.LavinMQSpec{
+		Spec: cloudamqpcomv1alpha1.LavinMQSpec{
 			Image:     instanceImage,
 			Resources: defaultResources,
 			DataVolumeClaimSpec: corev1.PersistentVolumeClaimSpec{

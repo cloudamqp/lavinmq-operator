@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	cloudamqpcomv1alpha1 "lavinmq-operator/api/v1alpha1"
+	cloudamqpcomv1alpha1 "github.com/cloudamqp/lavinmq-operator/api/v1alpha1"
 
 	"github.com/stretchr/testify/assert"
 	appsv1 "k8s.io/api/apps/v1"
@@ -45,7 +45,7 @@ func TestCreateLavinMQ(t *testing.T) {
 
 			lavinmq := &cloudamqpcomv1alpha1.LavinMQ{
 				TypeMeta: metav1.TypeMeta{
-					APIVersion: "cloudamqp.com.cloudamqp.com/v1alpha1",
+					APIVersion: "cloudamqp.com/v1alpha1",
 					Kind:       "LavinMQ",
 				},
 				ObjectMeta: metav1.ObjectMeta{

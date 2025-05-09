@@ -3,7 +3,8 @@ package reconciler
 import (
 	"context"
 	"fmt"
-	"lavinmq-operator/internal/controller/utils"
+
+	"github.com/cloudamqp/lavinmq-operator/internal/controller/utils"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"

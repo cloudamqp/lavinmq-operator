@@ -217,7 +217,7 @@ type LavinMQStatus struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	// Conditions store the status conditions of the LavinMQ instances
-	// +operator-sdk:csv:customresourcedefinitions:type=status
+	// +lavinmq-operator:csv:customresourcedefinitions:type=status
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
 }
 

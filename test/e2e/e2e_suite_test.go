@@ -3,11 +3,12 @@ package e2e
 import (
 	"context"
 	"fmt"
-	"lavinmq-operator/test/utils"
 	"log"
 	"os"
 	"os/exec"
 	"testing"
+
+	"github.com/cloudamqp/lavinmq-operator/test/utils"
 
 	"sigs.k8s.io/e2e-framework/pkg/env"
 	"sigs.k8s.io/e2e-framework/pkg/envconf"

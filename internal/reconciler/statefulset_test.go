@@ -12,9 +12,9 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 
-	cloudamqpcomv1alpha1 "lavinmq-operator/api/v1alpha1"
-	"lavinmq-operator/internal/reconciler"
-	testutils "lavinmq-operator/internal/test_utils"
+	cloudamqpcomv1alpha1 "github.com/cloudamqp/lavinmq-operator/api/v1alpha1"
+	"github.com/cloudamqp/lavinmq-operator/internal/reconciler"
+	testutils "github.com/cloudamqp/lavinmq-operator/internal/test_utils"
 )
 
 func TestStatefulSetReconciler(t *testing.T) {

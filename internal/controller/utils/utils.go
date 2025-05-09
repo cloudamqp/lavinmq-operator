@@ -1,7 +1,7 @@
 package utils
 
 import (
-	cloudamqpcomv1alpha1 "lavinmq-operator/api/v1alpha1"
+	cloudamqpcomv1alpha1 "github.com/cloudamqp/lavinmq-operator/api/v1alpha1"
 )
 
 func LabelsForLavinMQ(instance *cloudamqpcomv1alpha1.LavinMQ) map[string]string {

@@ -35,8 +35,8 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
-	cloudamqpcomv1alpha1 "lavinmq-operator/api/v1alpha1"
-	"lavinmq-operator/internal/controller"
+	cloudamqpcomv1alpha1 "github.com/cloudamqp/lavinmq-operator/api/v1alpha1"
+	"github.com/cloudamqp/lavinmq-operator/internal/controller"
 	// +kubebuilder:scaffold:imports
 )
 

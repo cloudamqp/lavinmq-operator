@@ -1,10 +1,11 @@
 package reconciler_test
 
 import (
-	"lavinmq-operator/internal/reconciler"
-	testutils "lavinmq-operator/internal/test_utils"
 	"slices"
 	"testing"
+
+	"github.com/cloudamqp/lavinmq-operator/internal/reconciler"
+	testutils "github.com/cloudamqp/lavinmq-operator/internal/test_utils"
 
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"

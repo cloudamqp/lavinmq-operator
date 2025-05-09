@@ -4,20 +4,19 @@
 # More info: https://book.kubebuilder.io/reference/project-config.html
 domain: cloudamqp.com
 layout:
-- go.kubebuilder.io/v4
+  - go.kubebuilder.io/v4
 plugins:
   manifests.sdk.operatorframework.io/v2: {}
   scorecard.sdk.operatorframework.io/v2: {}
-projectName: operator-sdk
-repo: lavinmq-operator
+projectName: lavinmq-operator
+repo: github.com/cloudamqp/lavinmq-operator
 resources:
-- api:
-    crdVersion: v1
-    namespaced: true
-  controller: true
-  domain: cloudamqp.com
-  group: cloudamqp.com
-  kind: LavinMQ
-  path: lavinmq-operator/api/v1alpha1
-  version: v1alpha1
+  - api:
+      crdVersion: v1
+      namespaced: true
+    controller: true
+    domain: cloudamqp.com
+    kind: LavinMQ
+    path: github.com/cloudamqp/lavinmq-operator/api/v1alpha
+    version: v1alpha1
 version: "3"

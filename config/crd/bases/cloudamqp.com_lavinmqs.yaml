@@ -4,9 +4,9 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.16.1
-  name: lavinmqs.cloudamqp.com.cloudamqp.com
+  name: lavinmqs.cloudamqp.com
 spec:
-  group: cloudamqp.com.cloudamqp.com
+  group: cloudamqp.com
   names:
     kind: LavinMQ
     listKind: LavinMQList

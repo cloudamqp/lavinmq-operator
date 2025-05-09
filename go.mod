@@ -1,4 +1,4 @@
-module lavinmq-operator
+module github.com/cloudamqp/lavinmq-operator
 
 go 1.24
 

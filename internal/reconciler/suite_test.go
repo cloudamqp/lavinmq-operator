@@ -8,7 +8,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
-	testutils "lavinmq-operator/internal/test_utils"
+	testutils "github.com/cloudamqp/lavinmq-operator/internal/test_utils"
 	// +kubebuilder:scaffold:imports
 )
 

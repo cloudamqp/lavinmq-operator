@@ -28,8 +28,8 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 
-	cloudamqpcomv1alpha1 "lavinmq-operator/api/v1alpha1"
-	testutils "lavinmq-operator/internal/test_utils"
+	cloudamqpcomv1alpha1 "github.com/cloudamqp/lavinmq-operator/api/v1alpha1"
+	testutils "github.com/cloudamqp/lavinmq-operator/internal/test_utils"
 )
 
 func TestNonExistentLavinMQ(t *testing.T) {
