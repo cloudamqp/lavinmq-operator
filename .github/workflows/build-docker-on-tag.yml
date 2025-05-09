@@ -31,5 +31,4 @@ jobs:
       - name: Upload Installer
         uses: actions/upload-artifact@v4
         with:
-          name: dist/install.yaml
           path: dist/install.yaml
