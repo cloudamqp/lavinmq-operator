@@ -17,6 +17,6 @@ resources:
     controller: true
     domain: cloudamqp.com
     kind: LavinMQ
-    path: github.com/cloudamqp/lavinmq-operator/api/v1alpha
+    path: github.com/cloudamqp/lavinmq-operator/api/v1alpha1
     version: v1alpha1
 version: "3"
