@@ -10,7 +10,7 @@ Supported features:
 - Increasing disk size
 - Setting LavinMQ specific configurations. Rolling restarts automatically applied.
 
-Known issues/limiations/roadmap:
+Known issues/limitations/roadmap:
 
 - Scaling disk is only supporting disk size increase
 - Updating TLS contents do not apply a restart/reload of LavinMQs state. A manual restart/reapply is needed
