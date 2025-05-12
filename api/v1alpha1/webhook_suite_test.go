@@ -106,7 +106,7 @@ var _ = BeforeSuite(func() {
 		WebhookServer: webhook.NewServer(webhook.Options{
 			Host:    webhookInstallOptions.LocalServingHost,
 			Port:    webhookInstallOptions.LocalServingPort,
-			CertDir: webhookInstallOptions.LocalServingCertDir,
+			CertDir: filepath.Join("..", "..", "test", "certs"),
 		}),
 		LeaderElection: false,
 		Metrics:        metricsserver.Options{BindAddress: "0"},
@@ -130,10 +130,16 @@ var _ = BeforeSuite(func() {
 	Eventually(func() error {
 		conn, err := tls.DialWithDialer(dialer, "tcp", addrPort, &tls.Config{InsecureSkipVerify: true})
 		if err != nil {
+			fmt.Printf("Error connecting to webhook server: %v\n", err)
 			return err
 		}
 		return conn.Close()
-	}).Should(Succeed())
+	}, 10*time.Second, 200*time.Millisecond).Should(Succeed()) // Increased timeout
+
+	fmt.Printf("Webhook server options: Host=%s, Port=%d, CertDir=%s\n",
+		webhookInstallOptions.LocalServingHost,
+		webhookInstallOptions.LocalServingPort,
+		filepath.Join("..", "..", "test", "certs"))
 
 })
 

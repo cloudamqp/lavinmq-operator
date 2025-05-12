@@ -30,6 +30,7 @@ var lavinmqlog = logf.Log.WithName("lavinmq-resource")
 
 // SetupWebhookWithManager will setup the manager to manage the webhooks
 func (r *LavinMQ) SetupWebhookWithManager(mgr ctrl.Manager) error {
+
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(r).
 		Complete()
