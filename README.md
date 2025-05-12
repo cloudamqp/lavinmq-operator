@@ -44,7 +44,7 @@ The LavinMQ Operator supports a wide range of configurations, as defined in the 
    - `tlsSecret` field references a Kubernetes Secret containing TLS certificates for secure communication.
 
 7. **LavinMQ Configuration:**
-   - The `config` field allows detailed customization of LavinMQ behavior through the following sub-configurations, see [LavinMQ Configuration documenation](https://lavinmq.com/documentation/configuration-files) for extended list of configurations
+   - The `config` field allows detailed customization of LavinMQ behavior through the following sub-configurations, see [LavinMQ Configuration documentation](https://lavinmq.com/documentation/configuration-files) for extended list of configurations
      - **Main Configuration:**
        - Consumer timeout, default prefetch, default user/password, disk space thresholds, logging levels, and more.
      - **Mgmt Configuration:**
