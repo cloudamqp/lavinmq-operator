@@ -22,6 +22,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"sigs.k8s.io/e2e-framework/support"
 )
 
 const (
@@ -163,7 +165,7 @@ func SetupEtcdCluster(namespace string) error {
 	return nil
 }
 
-func BuildingAndInstallingOperator(projectimage string, kindClusterName string) error {
+func BuildingOperatorImage(projectimage string) error {
 	fmt.Println("building the manager(Operator) image")
 	cmd := exec.Command("make", "docker-build", fmt.Sprintf("IMG=%s", projectimage))
 	_, err := Run(cmd)
@@ -171,15 +173,14 @@ func BuildingAndInstallingOperator(projectimage string, kindClusterName string) 
 		return err
 	}
 
-	fmt.Println("loading the manager(Operator) image on Kind")
-	err = LoadImageToKindClusterWithName(projectimage, kindClusterName)
-	if err != nil {
-		return err
-	}
+	return nil
+}
+
+func InstallingOperator(projectimage string, kindClusterName string, kindCluster support.E2EClusterProvider) error {
 
 	fmt.Println("installing the Operator CRD")
-	cmd = exec.Command("make", "install")
-	_, err = Run(cmd)
+	cmd := exec.Command("make", "install")
+	_, err := Run(cmd)
 	if err != nil {
 		return err
 	}
@@ -230,14 +231,6 @@ func VerifyControllerUp(namespace string) error {
 		return fmt.Errorf("controller pod in %s status", status)
 	}
 	return nil
-}
-
-// LoadImageToKindClusterWithName loads a local docker image to the kind cluster
-func LoadImageToKindClusterWithName(name string, clusterName string) error {
-	kindOptions := []string{"load", "docker-image", name, "--name", clusterName}
-	cmd := exec.Command("kind", kindOptions...)
-	_, err := Run(cmd)
-	return err
 }
 
 // GetNonEmptyLines converts given command output string into individual objects

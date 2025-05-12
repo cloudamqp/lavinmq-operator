@@ -37,7 +37,7 @@ func TestMain(m *testing.M) {
 	// Setup test environment
 	testEnv.Setup(
 		func(ctx context.Context, cfg *envconf.Config) (context.Context, error) {
-			log.Println("Creating kind cluster...")
+			log.Println("Creating kind cluster...", kindClusterName)
 			return envfuncs.CreateClusterWithOpts(
 				kindCluster,
 				kindClusterName,
@@ -71,8 +71,17 @@ func TestMain(m *testing.M) {
 			return ctx, nil
 		},
 		func(ctx context.Context, cfg *envconf.Config) (context.Context, error) {
-			log.Println("Building and installing the operator...")
-			err := utils.BuildingAndInstallingOperator(projectimage, kindClusterName)
+			log.Println("Building the operator image...")
+			err := utils.BuildingOperatorImage(projectimage)
+			if err != nil {
+				return ctx, fmt.Errorf("failed to build operator image: %w", err)
+			}
+			return ctx, nil
+		},
+		envfuncs.LoadImageToCluster(kindClusterName, projectimage),
+		func(ctx context.Context, cfg *envconf.Config) (context.Context, error) {
+			log.Println("Installing the operator...")
+			err := utils.InstallingOperator(projectimage, kindClusterName, kindCluster)
 			if err != nil {
 				return ctx, fmt.Errorf("failed to build and install operator: %w", err)
 			}
