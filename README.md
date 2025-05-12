@@ -1,8 +1,64 @@
-# lavinmq-operator
-// TODO(user): Add simple overview of use/purpose
+# LavinMQ-operator
 
 ## Description
-// TODO(user): An in-depth paragraph about your project and overview of use
+The LavinMQ Operator provides a way to deploy and manage LavinMQ clusters on Kubernetes. It leverages Kubernetes Custom Resource Definitions (CRDs) to define and manage LavinMQ instances as native Kubernetes resources.
+
+Supported features:
+
+- LavinMQ version upgrades
+- Scaling - Horizontal and vertical.
+- Increasing disk size
+- Setting LavinMQ specific configurations. Rolling restarts automatically applied.
+
+Known issues/limiations/roadmap:
+
+- Scaling disk is only supporting disk size increase
+- Updating TLS contents do not apply a restart/reload of LavinMQs state. A manual restart/reapply is needed
+- ETCD has to be managed by end-user and is not provided via this operator. It is on the roadmap though
+  - There is a example in config/samples/etcd_cluster.yaml to setup an etcd cluster using https://github.com/etcd-io/etcd-operator, the operator has to be pre-installed to use this.
+  - A meta operator is being considered to manage the etcd and lavinmq simultaneously, see related issue https://github.com/cloudamqp/lavinmq-operator/issues/39
+- Monitoring capability is currently limited to what LavinMQ itself provides.
+
+Following [operator-sdks Capability Levels](https://sdk.operatorframework.io/docs/overview/operator-capabilities/), the operator can be considered as a Level 3 implementation currently.
+
+## Supported Configurations
+
+The LavinMQ Operator supports a wide range of configurations, as defined in the `lavinmq_types.go` file. Here's a detailed description of the supported features and configurations:
+
+1. **Image Configuration:**
+   - The operator allows specifying a custom Docker image for LavinMQ using the `image` field. By default, it uses `cloudamqp/lavinmq:2.3.0`.
+
+2. **Replicas:**
+   - You can configure the number of replicas for the LavinMQ cluster. The value must be between 1 and 3, with a default of 1.
+
+3. **Resource Management:**
+   - `resources` field allows specifying CPU and memory requests/limits for the LavinMQ pods.
+
+4. **Persistent Storage:**
+   - `dataVolumeClaim` field is required and defines the PersistentVolumeClaim (PVC) for storing data. It enforces the `ReadWriteOnce` access mode.
+
+5. **Etcd Integration:**
+   - `etcdEndpoints` field allows specifying a list of etcd endpoints for clustering. Required if running more than a single node of LavinMQ
+
+6. **TLS Configuration:**
+   - `tlsSecret` field references a Kubernetes Secret containing TLS certificates for secure communication.
+
+7. **LavinMQ Configuration:**
+   - The `config` field allows detailed customization of LavinMQ behavior through the following sub-configurations, see [LavinMQ Configuration documenation](https://lavinmq.com/documentation/configuration-files) for extended list of configurations
+     - **Main Configuration:**
+       - Consumer timeout, default prefetch, default user/password, disk space thresholds, logging levels, and more.
+     - **Mgmt Configuration:**
+       - HTTP/HTTPS management ports and configurations related to the UI.
+     - **AMQP Configuration:**
+       - Channel limits, frame size, heartbeat intervals, and AMQP/AMQPS ports, etc...
+     - **MQTT Configuration:**
+       - In-flight message limits and MQTT/MQTTS ports.
+     - **Clustering Configuration:**
+       - Maximum unsynced actions in the cluster.
+
+## Provided examples
+In `config/samples/`
+
 
 ## Getting Started
 
