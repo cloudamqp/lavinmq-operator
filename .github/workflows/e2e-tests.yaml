@@ -43,9 +43,9 @@ jobs:
         uses: azure/setup-kubectl@v4
 
       - name: Set up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
-          go-version: "1.24"
+          go-version-file: 'go.mod'
 
       - name: Cache Go dependencies
         uses: actions/cache@v3
