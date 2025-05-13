@@ -4,6 +4,34 @@ kind: CustomResourceDefinition
 metadata:
   name: lavinmqs.cloudamqp.com
 spec:
+  group: cloudamqp.com
+  names:
+    kind: LavinMQ
+    listKind: LavinmqList
+    plural: lavinmqs
+    shortNames:
+      - lav
+    singular: lavinmq
+  scope: Namespaced
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              properties:
+                replicas:
+                  type: integer
+                image:
+                  type: string
+                config:
+                  type: object
+                  additionalProperties:
+                    type: string
   conversion:
     strategy: Webhook
     webhook:
@@ -13,4 +41,4 @@ spec:
           name: webhook-service
           path: /convert
       conversionReviewVersions:
-      - v1
+        - v1
