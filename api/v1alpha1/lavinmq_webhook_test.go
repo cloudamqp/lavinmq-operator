@@ -24,8 +24,7 @@ var _ = Describe("LavinMQ Webhook", func() {
 
 	Context("When creating LavinMQ under Validating Webhook", func() {
 		It("Should deny if a required field is empty", func() {
-
-			// TODO(user): Add your logic here
+			panic("IMPLEMENT ME")
 
 		})
 

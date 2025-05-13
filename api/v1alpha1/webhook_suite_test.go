@@ -106,7 +106,7 @@ var _ = BeforeSuite(func() {
 		WebhookServer: webhook.NewServer(webhook.Options{
 			Host:    webhookInstallOptions.LocalServingHost,
 			Port:    webhookInstallOptions.LocalServingPort,
-			CertDir: filepath.Join("..", "..", "test", "certs"),
+			CertDir: webhookInstallOptions.LocalServingCertDir,
 		}),
 		LeaderElection: false,
 		Metrics:        metricsserver.Options{BindAddress: "0"},
