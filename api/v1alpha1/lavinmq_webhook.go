@@ -17,11 +17,13 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"context"
 	"fmt"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
@@ -41,15 +43,17 @@ func (r *LavinMQ) SetupWebhookWithManager(mgr ctrl.Manager) error {
 // Modifying the path for an invalid path can cause API server errors; failing to locate the webhook.
 // +kubebuilder:webhook:path=/validate-cloudamqp-com-v1alpha1-lavinmq,mutating=false,failurePolicy=fail,sideEffects=None,groups=cloudamqp.com,resources=lavinmqs,verbs=create;update,versions=v1alpha1,name=vlavinmq.kb.io,admissionReviewVersions=v1
 
+var _ webhook.CustomValidator = &LavinMQ{}
+
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (r *LavinMQ) ValidateCreate() (admission.Warnings, error) {
+func (r *LavinMQ) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
 	lavinmqlog.Info("validate create", "name", r.Name)
 	lavinmqlog.Info("validate create", r)
 	return nil, fmt.Errorf("LavinMQ %s is not ready to be created", r.Name)
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (r *LavinMQ) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
+func (r *LavinMQ) ValidateUpdate(ctx context.Context, obj runtime.Object, old runtime.Object) (admission.Warnings, error) {
 	lavinmqlog.Info("validate update", "name", r.Name)
 
 	// TODO(user): fill in your validation logic upon object update.
@@ -57,7 +61,7 @@ func (r *LavinMQ) ValidateUpdate(old runtime.Object) (admission.Warnings, error)
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
-func (r *LavinMQ) ValidateDelete() (admission.Warnings, error) {
+func (r *LavinMQ) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
 	lavinmqlog.Info("validate delete", "name", r.Name)
 
 	// TODO(user): fill in your validation logic upon object deletion.
