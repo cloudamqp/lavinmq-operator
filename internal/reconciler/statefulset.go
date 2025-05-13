@@ -52,6 +52,8 @@ func (b *StatefulSetReconciler) Reconcile(ctx context.Context) (ctrl.Result, err
 		}
 
 		if err := b.Client.Update(ctx, statefulset); err != nil {
+			// Conflict errors are expected during retries and do not indicate a critical issue.
+			// Logging them would create unnecessary noise in the logs.
 			if !apierrors.IsConflict(err) {
 				b.Logger.Error(err, "Failed updating new statefulset")
 			}
