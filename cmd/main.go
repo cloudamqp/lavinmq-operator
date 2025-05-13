@@ -17,7 +17,6 @@ limitations under the License.
 package main
 
 import (
-	"context"
 	"crypto/tls"
 	"flag"
 	"os"
@@ -172,13 +171,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	go func() {
-		err = webhookServer.Start(context.Background())
-		if err != nil {
-			setupLog.Error(err, "unable to start webhook server")
-			os.Exit(1)
-		}
-	}()
+	// go func() {
+	// 	err = webhookServer.Start(context.Background())
+	// 	if err != nil {
+	// 		setupLog.Error(err, "unable to start webhook server")
+	// 		os.Exit(1)
+	// 	}
+	// }()
 
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
