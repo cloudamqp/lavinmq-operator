@@ -93,10 +93,7 @@ func main() {
 	}
 
 	webhookServer := webhook.NewServer(webhook.Options{
-		TLSOpts:  tlsOpts,
-		CertDir:  "certs",
-		CertName: "lavinmq-cert.pem",
-		KeyName:  "lavinmq-key.pem",
+		TLSOpts: tlsOpts,
 	})
 
 	// Metrics endpoint is enabled in 'config/default/kustomization.yaml'. The Metrics options configure the server.
