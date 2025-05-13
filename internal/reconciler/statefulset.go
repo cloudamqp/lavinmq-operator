@@ -37,8 +37,7 @@ func (b *StatefulSetReconciler) Reconcile(ctx context.Context) (ctrl.Result, err
 	}
 
 	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		err := b.GetItem(ctx, statefulset)
-		if err != nil {
+		if err := b.GetItem(ctx, statefulset); err != nil {
 			if apierrors.IsNotFound(err) {
 				b.CreateItem(ctx, statefulset)
 				return nil
@@ -47,15 +46,16 @@ func (b *StatefulSetReconciler) Reconcile(ctx context.Context) (ctrl.Result, err
 			return err
 		}
 
-		err = b.updateFields(ctx, statefulset)
-		if err != nil {
-			b.Logger.Error(err, "Failed updating statefulset")
+		if err := b.updateFields(ctx, statefulset); err != nil {
+			b.Logger.Error(err, "Failed calculating new statefulset")
 			return err
 		}
 
-		err = b.Client.Update(ctx, statefulset)
-		if err != nil {
-			b.Logger.Error(err, "Failed updating statefulset something something, trying again?")
+		if err := b.Client.Update(ctx, statefulset); err != nil {
+			if !apierrors.IsConflict(err) {
+				b.Logger.Error(err, "Failed updating new statefulset")
+			}
+
 			return err
 		}
 
