@@ -49,7 +49,6 @@ var _ webhook.CustomValidator = &LavinMQ{}
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (r *LavinMQ) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
 	lavinmqlog.Info("validate create", "name", r.Name)
-	lavinmqlog.Info("validate create", r)
 	return nil, fmt.Errorf("LavinMQ %s is not ready to be created", r.Name)
 }
 
