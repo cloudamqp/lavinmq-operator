@@ -31,8 +31,8 @@ const (
 	prometheusOperatorURL     = "https://github.com/prometheus-operator/prometheus-operator/" +
 		"releases/download/%s/bundle.yaml"
 
-	certmanagerVersion = "v1.14.4"
-	certmanagerURLTmpl = "https://github.com/jetstack/cert-manager/releases/download/%s/cert-manager.yaml"
+	certmanagerVersion = "v1.17.2"
+	certmanagerURLTmpl = "https://github.com/cert-manager/cert-manager/releases/download/%s/cert-manager.yaml"
 
 	etcdOperatorVersion = "v0.1.0"
 	etcdOperatorURL     = "https://github.com/etcd-io/etcd-operator/releases/download/%s/install-%s.yaml"
