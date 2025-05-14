@@ -139,6 +139,34 @@ func (b *StatefulSetReconciler) appendSpec(sts *appsv1.StatefulSet) *appsv1.Stat
 								},
 							},
 						},
+						// Startup probe will be used for startup of the container. Once the startup probe succeeds,
+						// the liveness and readiness probes will be used.
+						StartupProbe: &corev1.Probe{
+							ProbeHandler: corev1.ProbeHandler{
+								Exec: &corev1.ExecAction{
+									Command: []string{"/usr/bin/lavinmqctl", "status"},
+								},
+							},
+							FailureThreshold: 30,
+							PeriodSeconds:    10,
+						},
+						LivenessProbe: &corev1.Probe{
+							ProbeHandler: corev1.ProbeHandler{
+								Exec: &corev1.ExecAction{
+									Command: []string{"/usr/bin/lavinmqctl", "status"},
+								},
+							},
+							PeriodSeconds: 10,
+						},
+						ReadinessProbe: &corev1.Probe{
+							ProbeHandler: corev1.ProbeHandler{
+								Exec: &corev1.ExecAction{
+									Command: []string{"/usr/bin/lavinmqctl", "status"},
+								},
+							},
+							InitialDelaySeconds: 5,
+							PeriodSeconds:       10,
+						},
 					},
 				},
 				Volumes: []corev1.Volume{
