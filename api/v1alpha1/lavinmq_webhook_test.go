@@ -18,20 +18,63 @@ package v1alpha1
 
 import (
 	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("LavinMQ Webhook", func() {
 
-	Context("When creating LavinMQ under Validating Webhook", func() {
-		It("Should deny if a required field is empty", func() {
-			panic("IMPLEMENT ME")
-
+	Context("When creating LavinMQ", func() {
+		It("Should accept default", func() {
+			lavin := &LavinMQ{}
+			_, err := lavin.ValidateCreate(nil, nil)
+			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("Should admit if all required fields are provided", func() {
+		It("Should accept clustering with etcd", func() {
+			lavin := &LavinMQ{Spec: LavinMQSpec{
+				Replicas:      3,
+				EtcdEndpoints: []string{"http://etcd-cluster:2379"},
+			},
+			}
+			_, err := lavin.ValidateCreate(nil, nil)
+			Expect(err).NotTo(HaveOccurred())
+		})
 
-			// TODO(user): Add your logic here
+		It("Should deny if a clustering without etcd", func() {
+			lavin := &LavinMQ{Spec: LavinMQSpec{
+				Replicas: 3,
+			},
+			}
+			_, err := lavin.ValidateCreate(nil, nil)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("a provided etcd cluster is required for replication"))
+		})
+	})
+	Context("When updating LavinMQ", func() {
+		It("Should accept default", func() {
+			lavin := &LavinMQ{}
+			_, err := lavin.ValidateCreate(nil, nil)
+			Expect(err).NotTo(HaveOccurred())
+		})
 
+		It("Should accept clustering with etcd", func() {
+			lavin := &LavinMQ{Spec: LavinMQSpec{
+				Replicas:      3,
+				EtcdEndpoints: []string{"http://etcd-cluster:2379"},
+			},
+			}
+			_, err := lavin.ValidateCreate(nil, nil)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("Should deny if a clustering without etcd", func() {
+			lavin := &LavinMQ{Spec: LavinMQSpec{
+				Replicas: 3,
+			},
+			}
+			_, err := lavin.ValidateCreate(nil, nil)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("a provided etcd cluster is required for replication"))
 		})
 	})
 
