@@ -17,9 +17,6 @@ jobs:
         with:
           go-version-file: "go.mod"
 
-      - name: Clean Go Modules
-        run: rm -rf ~/go/pkg/mod
-
       - name: Cache Go dependencies
         uses: actions/cache@v3
         with:
@@ -27,8 +24,6 @@ jobs:
             ~/go/pkg/mod
             ~/.cache/go-build
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
 
       - name: Install dependencies
         run: |
