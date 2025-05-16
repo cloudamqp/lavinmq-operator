@@ -134,12 +134,7 @@ var _ = BeforeSuite(func() {
 			return err
 		}
 		return conn.Close()
-	}, 10*time.Second, 200*time.Millisecond).Should(Succeed()) // Increased timeout
-
-	fmt.Printf("Webhook server options: Host=%s, Port=%d, CertDir=%s\n",
-		webhookInstallOptions.LocalServingHost,
-		webhookInstallOptions.LocalServingPort,
-		filepath.Join("..", "..", "test", "certs"))
+	}, 10*time.Second, 200*time.Millisecond).Should(Succeed())
 
 })
 
