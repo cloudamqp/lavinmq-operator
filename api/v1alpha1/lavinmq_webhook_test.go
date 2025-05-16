@@ -25,33 +25,33 @@ import (
 
 func TestCreateDefault(t *testing.T) {
 	t.Parallel()
-	lavin := &LavinMQ{}
-	_, err := lavin.ValidateCreate(context.TODO(), nil)
+	lavinMQ := &LavinMQ{}
+	_, err := lavinMQ.ValidateCreate(context.TODO(), lavinMQ)
 	assert.NoErrorf(t, err, "Failed to validate update")
 }
 
 func TestCreateClusterWithEtcd(t *testing.T) {
 	t.Parallel()
-	lavin := &LavinMQ{Spec: LavinMQSpec{
+	lavinMQ := &LavinMQ{Spec: LavinMQSpec{
 		Replicas:      3,
 		EtcdEndpoints: []string{"http://etcd-cluster:2379"},
 	},
 	}
-	_, err := lavin.ValidateCreate(context.TODO(), nil)
+	_, err := lavinMQ.ValidateCreate(context.TODO(), lavinMQ)
 	assert.NoErrorf(t, err, "Failed to validate create")
-
 }
+
 func TestCreateClusterWithoutEtcd(t *testing.T) {
 	t.Parallel()
-	lavin := &LavinMQ{Spec: LavinMQSpec{
+	lavinMQ := &LavinMQ{Spec: LavinMQSpec{
 		Replicas: 3,
 	},
 	}
-	_, err := lavin.ValidateCreate(context.TODO(), nil)
+	_, err := lavinMQ.ValidateCreate(context.TODO(), lavinMQ)
 	assert.Errorf(t, err, "Expected error when creating cluster without etcd")
 	assert.Equal(t, err.Error(), "a provided etcd cluster is required for replication")
-
 }
+
 func TestUpdateDefault(t *testing.T) {
 	t.Parallel()
 	oldLavinMQ := &LavinMQ{}
@@ -59,6 +59,7 @@ func TestUpdateDefault(t *testing.T) {
 	_, err := newLavinMQ.ValidateUpdate(context.TODO(), newLavinMQ, oldLavinMQ)
 	assert.NoErrorf(t, err, "Failed to validate update")
 }
+
 func TestUpdateStandaloneToCluster(t *testing.T) {
 	t.Parallel()
 	oldLavinMQ := &LavinMQ{Spec: LavinMQSpec{
@@ -72,6 +73,7 @@ func TestUpdateStandaloneToCluster(t *testing.T) {
 	assert.Errorf(t, err, "Expected error when updating from standalone to cluster without etcd")
 	assert.Equal(t, err.Error(), "in order to safely transition without message loss from single to multi node, first update to run the single node with etcd cluster, then update to multi node")
 }
+
 func TestUpdateStandaloneToClusterNoEtcd(t *testing.T) {
 	t.Parallel()
 	oldLavinMQ := &LavinMQ{Spec: LavinMQSpec{
