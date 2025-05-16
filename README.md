@@ -18,7 +18,7 @@ Known issues/limitations/roadmap:
   - There is a example in config/samples/etcd_cluster.yaml to setup an etcd cluster using https://github.com/etcd-io/etcd-operator, the operator has to be pre-installed to use this.
   - A meta operator is being considered to manage the etcd and lavinmq simultaneously, see related issue https://github.com/cloudamqp/lavinmq-operator/issues/39
 - Monitoring capability is currently limited to what LavinMQ itself provides.
-- admission webhooks are not ran in dev environment unless providing a certificate in dev env and ran with `ENABLE_WEBHOOK=true`
+- admission webhooks are not ran in dev environment unless providing a certificate in dev env and ran with `ENABLE_WEBHOOKS=true`
 
 Following [operator-sdks Capability Levels](https://sdk.operatorframework.io/docs/overview/operator-capabilities/), the operator can be considered as a Level 3 implementation currently.
 
@@ -58,7 +58,12 @@ The LavinMQ Operator supports a wide range of configurations, as defined in the 
        - Maximum unsynced actions in the cluster.
 
 ## Provided examples
-In `config/samples/`
+In `config/samples/` there is examples to showcase the features of the operator.
+- `etcd_cluster.yaml` contains a etcd cluster using a different [etcd-operator](https://github.com/etcd-io/etcd-operator)
+- `lavinmq-tls-secret.yaml`, sets up a secret containing a self-signed certificate to test out TLS listeners
+- `v1alpha_lavinmq.yaml`, sets up a LavinMQ cluster with dependencies to prior etcd and tls configs.
+
+Apply with `kubectl apply -k config/samples/`
 
 ## Getting Started
 
