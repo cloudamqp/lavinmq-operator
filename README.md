@@ -18,6 +18,7 @@ Known issues/limitations/roadmap:
   - There is a example in config/samples/etcd_cluster.yaml to setup an etcd cluster using https://github.com/etcd-io/etcd-operator, the operator has to be pre-installed to use this.
   - A meta operator is being considered to manage the etcd and lavinmq simultaneously, see related issue https://github.com/cloudamqp/lavinmq-operator/issues/39
 - Monitoring capability is currently limited to what LavinMQ itself provides.
+- admission webhooks are not ran in dev environment unless providing a certificate in dev env and ran with `ENABLE_WEBHOOK=true`
 
 Following [operator-sdks Capability Levels](https://sdk.operatorframework.io/docs/overview/operator-capabilities/), the operator can be considered as a Level 3 implementation currently.
 
@@ -67,6 +68,7 @@ In `config/samples/`
 - kubectl version v1.11.3+.
 - Access to a Kubernetes v1.11.3+ cluster.
 - Permissions to modify RBAC rules (cluster-admin)
+- cert-manager installed on k8 cluster. See [installation instructions](https://cert-manager.io/docs/installation/)
 
 ### To Deploy on the cluster
 
