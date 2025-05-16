@@ -17,65 +17,45 @@ limitations under the License.
 package v1alpha1
 
 import (
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+	"context"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
-var _ = Describe("LavinMQ Webhook", func() {
+func TestCreateDefault(t *testing.T) {
+	t.Parallel()
+	lavin := &LavinMQ{}
+	_, err := lavin.ValidateCreate(context.TODO(), nil)
+	assert.NoErrorf(t, err, "Failed to validate update")
+}
 
-	Context("When creating LavinMQ", func() {
-		It("Should accept default", func() {
-			lavin := &LavinMQ{}
-			_, err := lavin.ValidateCreate(nil, nil)
-			Expect(err).NotTo(HaveOccurred())
-		})
+func TestCreateClusterWithEtcd(t *testing.T) {
+	t.Parallel()
+	lavin := &LavinMQ{Spec: LavinMQSpec{
+		Replicas:      3,
+		EtcdEndpoints: []string{"http://etcd-cluster:2379"},
+	},
+	}
+	_, err := lavin.ValidateCreate(context.TODO(), nil)
+	assert.NoErrorf(t, err, "Failed to validate create")
 
-		It("Should accept clustering with etcd", func() {
-			lavin := &LavinMQ{Spec: LavinMQSpec{
-				Replicas:      3,
-				EtcdEndpoints: []string{"http://etcd-cluster:2379"},
-			},
-			}
-			_, err := lavin.ValidateCreate(nil, nil)
-			Expect(err).NotTo(HaveOccurred())
-		})
+}
+func TestCreateClusterWithoutEtcd(t *testing.T) {
+	t.Parallel()
+	lavin := &LavinMQ{Spec: LavinMQSpec{
+		Replicas: 3,
+	},
+	}
+	_, err := lavin.ValidateCreate(context.TODO(), nil)
+	assert.Errorf(t, err, "Expected error when creating cluster without etcd")
+	assert.Equal(t, err.Error(), "a provided etcd cluster is required for replication")
 
-		It("Should deny if a clustering without etcd", func() {
-			lavin := &LavinMQ{Spec: LavinMQSpec{
-				Replicas: 3,
-			},
-			}
-			_, err := lavin.ValidateCreate(nil, nil)
-			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("a provided etcd cluster is required for replication"))
-		})
-	})
-	Context("When updating LavinMQ", func() {
-		It("Should accept default", func() {
-			lavin := &LavinMQ{}
-			_, err := lavin.ValidateCreate(nil, nil)
-			Expect(err).NotTo(HaveOccurred())
-		})
-
-		It("Should accept clustering with etcd", func() {
-			lavin := &LavinMQ{Spec: LavinMQSpec{
-				Replicas:      3,
-				EtcdEndpoints: []string{"http://etcd-cluster:2379"},
-			},
-			}
-			_, err := lavin.ValidateCreate(nil, nil)
-			Expect(err).NotTo(HaveOccurred())
-		})
-
-		It("Should deny if a clustering without etcd", func() {
-			lavin := &LavinMQ{Spec: LavinMQSpec{
-				Replicas: 3,
-			},
-			}
-			_, err := lavin.ValidateCreate(nil, nil)
-			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("a provided etcd cluster is required for replication"))
-		})
-	})
-
-})
+}
+func TestUpdateDefault(t *testing.T) {
+	t.Parallel()
+	oldLavinMQ := &LavinMQ{}
+	newLavinMQ := &LavinMQ{}
+	_, err := newLavinMQ.ValidateUpdate(context.TODO(), newLavinMQ, oldLavinMQ)
+	assert.NoErrorf(t, err, "Failed to validate update")
+}
