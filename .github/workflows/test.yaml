@@ -17,6 +17,9 @@ jobs:
         with:
           go-version-file: "go.mod"
 
+      - name: Clean Go Modules
+        run: rm -rf ~/go/pkg/mod
+
       - name: Cache Go dependencies
         uses: actions/cache@v3
         with:
