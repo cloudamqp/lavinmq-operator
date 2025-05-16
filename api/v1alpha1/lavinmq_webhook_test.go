@@ -59,3 +59,62 @@ func TestUpdateDefault(t *testing.T) {
 	_, err := newLavinMQ.ValidateUpdate(context.TODO(), newLavinMQ, oldLavinMQ)
 	assert.NoErrorf(t, err, "Failed to validate update")
 }
+func TestUpdateStandaloneToCluster(t *testing.T) {
+	t.Parallel()
+	oldLavinMQ := &LavinMQ{Spec: LavinMQSpec{
+		Replicas: 1,
+	}}
+	newLavinMQ := &LavinMQ{Spec: LavinMQSpec{
+		Replicas:      3,
+		EtcdEndpoints: []string{"http://etcd-cluster:2379"},
+	}}
+	_, err := newLavinMQ.ValidateUpdate(context.TODO(), newLavinMQ, oldLavinMQ)
+	assert.Errorf(t, err, "Expected error when updating from standalone to cluster without etcd")
+	assert.Equal(t, err.Error(), "in order to safely transition without message loss from single to multi node, first update to run the single node with etcd cluster, then update to multi node")
+}
+func TestUpdateStandaloneToClusterNoEtcd(t *testing.T) {
+	t.Parallel()
+	oldLavinMQ := &LavinMQ{Spec: LavinMQSpec{
+		Replicas: 1,
+	}}
+	newLavinMQ := &LavinMQ{Spec: LavinMQSpec{
+		Replicas: 3,
+	}}
+	_, err := newLavinMQ.ValidateUpdate(context.TODO(), newLavinMQ, oldLavinMQ)
+	assert.Errorf(t, err, "Expected error when updating from standalone to cluster without etcd")
+	assert.Equal(t, err.Error(), "a provided etcd cluster is required for replication")
+}
+
+func TestUpdateStandaloneWithEtcd(t *testing.T) {
+	t.Parallel()
+	oldLavinMQ := &LavinMQ{Spec: LavinMQSpec{
+		Replicas: 1,
+	}}
+	newLavinMQ := &LavinMQ{Spec: LavinMQSpec{
+		Replicas:      1,
+		EtcdEndpoints: []string{"http://etcd-cluster:2379"},
+	}}
+	_, err := newLavinMQ.ValidateUpdate(context.TODO(), newLavinMQ, oldLavinMQ)
+	assert.NoErrorf(t, err, "Failed to validate update")
+}
+
+func TestUpdateStandaloneWithEtcdToCluster(t *testing.T) {
+	t.Parallel()
+	oldLavinMQ := &LavinMQ{Spec: LavinMQSpec{
+		Replicas:      1,
+		EtcdEndpoints: []string{"http://etcd-cluster:2379"},
+	}}
+	newLavinMQ := &LavinMQ{Spec: LavinMQSpec{
+		Replicas:      3,
+		EtcdEndpoints: []string{"http://etcd-cluster:2379"},
+	}}
+	_, err := newLavinMQ.ValidateUpdate(context.TODO(), newLavinMQ, oldLavinMQ)
+	assert.NoErrorf(t, err, "Failed to validate update")
+}
+
+func TestDeleteDefault(t *testing.T) {
+	t.Parallel()
+	lavinMQ := &LavinMQ{}
+	_, err := lavinMQ.ValidateDelete(context.TODO(), lavinMQ)
+	assert.NoErrorf(t, err, "Failed to validate update")
+}
