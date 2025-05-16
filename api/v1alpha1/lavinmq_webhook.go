@@ -48,8 +48,9 @@ var _ webhook.CustomValidator = &LavinMQ{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (r *LavinMQ) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
-	lavinmqlog.Info("validate create", "name", r.Spec.Replicas)
-	if r.Spec.Replicas > 1 && len(r.Spec.EtcdEndpoints) == 0 {
+	lavin := obj.(*LavinMQ)
+	lavinmqlog.Info("validate create", "name", lavin.Name)
+	if lavin.Spec.Replicas > 1 && len(lavin.Spec.EtcdEndpoints) == 0 {
 		return nil, fmt.Errorf("a provided etcd cluster is required for replication")
 	}
 	return nil, nil
@@ -57,9 +58,9 @@ func (r *LavinMQ) ValidateCreate(ctx context.Context, obj runtime.Object) (admis
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 func (r *LavinMQ) ValidateUpdate(ctx context.Context, new, old runtime.Object) (admission.Warnings, error) {
-	lavinmqlog.Info("validate update", "name", r.Name)
 	newLavinMQ := new.(*LavinMQ)
 	oldLavinMQ := old.(*LavinMQ)
+	lavinmqlog.Info("validate update", "name", newLavinMQ.Name)
 
 	if newLavinMQ.Spec.Replicas > 1 && len(newLavinMQ.Spec.EtcdEndpoints) == 0 {
 		return nil, fmt.Errorf("a provided etcd cluster is required for replication")
@@ -74,6 +75,5 @@ func (r *LavinMQ) ValidateUpdate(ctx context.Context, new, old runtime.Object) (
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
 func (r *LavinMQ) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
-	lavinmqlog.Info("validate delete", "name", r.Name)
 	return nil, nil
 }
