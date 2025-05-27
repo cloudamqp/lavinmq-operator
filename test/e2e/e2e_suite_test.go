@@ -55,6 +55,15 @@ func TestMain(m *testing.M) {
 		},
 
 		func(ctx context.Context, cfg *envconf.Config) (context.Context, error) {
+			log.Println("Installing cert manager...")
+			err := utils.InstallCertManager()
+			if err != nil {
+				return ctx, fmt.Errorf("failed to install cert manager: %w", err)
+			}
+			return ctx, nil
+		},
+
+		func(ctx context.Context, cfg *envconf.Config) (context.Context, error) {
 			log.Println("Installing etcd operator...")
 			err := utils.InstallEtcdOperator()
 			if err != nil {
@@ -108,6 +117,11 @@ func TestMain(m *testing.M) {
 		func(ctx context.Context, cfg *envconf.Config) (context.Context, error) {
 			log.Println("Uninstalling etcd operator...")
 			utils.UninstallEtcdOperator()
+			return ctx, nil
+		},
+		func(ctx context.Context, cfg *envconf.Config) (context.Context, error) {
+			log.Println("Uninstalling cert manager...")
+			utils.UninstallCertManager()
 			return ctx, nil
 		},
 		func(ctx context.Context, cfg *envconf.Config) (context.Context, error) {

@@ -9,17 +9,15 @@ metadata:
 spec:
   image: cloudamqp/lavinmq:2.3.0
   replicas: 3
+  etcdEndpoints:
+    - etcd-cluster-0.etcd-cluster.default.svc.cluster.local:2379
   resources:
     requests:
       cpu: 500m
       memory: 128Mi
     limits:
-      cpu: 2000m
+      cpu: 1000m
       memory: 256Mi
-  etcdEndpoints:
-    - etcd-cluster-0.etcd-cluster.default.svc.cluster.local:2379
-    - etcd-cluster-1.etcd-cluster.default.svc.cluster.local:2379
-    - etcd-cluster-2.etcd-cluster.default.svc.cluster.local:2379
   tlsSecret:
     name: lavinmq-tls
   dataVolumeClaim:

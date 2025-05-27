@@ -26,5 +26,8 @@ go.work
 *.swo
 *~
 
+# Ignore build results
+dist
+
 # Ignore cursor rules
 .cursor
