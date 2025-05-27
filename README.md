@@ -142,7 +142,7 @@ its dependencies.
 Users can just run kubectl apply -f <URL for YAML BUNDLE> to install the project, i.e.:
 
 ```sh
-kubectl apply -f https://raw.githubusercontent.com/<org>/lavinmq-operator/<tag or branch>/dist/install.yaml
+kubectl apply -f https://github.com/cloudamqp/lavinmq-operator/releases/download/<version>/install.yaml
 ```
 
 ## Contributing
