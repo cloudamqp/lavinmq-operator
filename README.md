@@ -59,7 +59,6 @@ The LavinMQ Operator supports a wide range of configurations, as defined in the 
 ## Provided examples
 In `config/samples/`
 
-
 ## Getting Started
 
 ### Prerequisites
@@ -67,7 +66,35 @@ In `config/samples/`
 - docker version 17.03+.
 - kubectl version v1.11.3+.
 - Access to a Kubernetes v1.11.3+ cluster.
+- Permission enough to modify RBAC rules (cluster-admin)
 
+### To Deploy on the cluster
+
+Users can just run kubectl apply -f <URL for YAML BUNDLE> to install the project, i.e.:
+
+```sh
+kubectl apply -f https://github.com/cloudamqp/lavinmq-operator/releases/download/<version>/install.yaml
+```
+
+Images are built and stored in GitHub assets upon new releases.
+
+**Create instances of your solution**
+You can apply the samples (examples) from the config/sample:
+
+```sh
+kubectl apply -k config/samples/
+```
+
+>**NOTE**: Ensure that the samples has default values to test it out. For ETCD example to work, you also need to install the ETCD operator
+
+### To Uninstall
+**UnDeploy the controller from the cluster:**
+
+```sh
+kubectl delete -f https://github.com/cloudamqp/lavinmq-operator/releases/download/<version>/install.yaml
+```
+
+## Development
 ### To Deploy on the cluster
 **Build and push your image to the location specified by `IMG`:**
 
@@ -91,18 +118,6 @@ make install
 make deploy IMG=<some-registry>/lavinmq-operator:tag
 ```
 
-> **NOTE**: If you encounter RBAC errors, you may need to grant yourself cluster-admin
-privileges or be logged in as admin.
-
-**Create instances of your solution**
-You can apply the samples (examples) from the config/sample:
-
-```sh
-kubectl apply -k config/samples/
-```
-
->**NOTE**: Ensure that the samples has default values to test it out.
-
 ### To Uninstall
 **Delete the instances (CRs) from the cluster:**
 
@@ -116,17 +131,9 @@ kubectl delete -k config/samples/
 make uninstall
 ```
 
-**UnDeploy the controller from the cluster:**
-
-```sh
-make undeploy
-```
-
 ## Project Distribution
 
-Following are the steps to build the installer and distribute this project to users.
-
-1. Build the installer for the image built and published in the registry:
+Build the installer for the image built and published in the registry:
 
 ```sh
 make build-installer IMG=<some-registry>/lavinmq-operator:tag
@@ -135,15 +142,7 @@ make build-installer IMG=<some-registry>/lavinmq-operator:tag
 NOTE: The makefile target mentioned above generates an 'install.yaml'
 file in the dist directory. This file contains all the resources built
 with Kustomize, which are necessary to install this project without
-its dependencies.
-
-2. Using the installer
-
-Users can just run kubectl apply -f <URL for YAML BUNDLE> to install the project, i.e.:
-
-```sh
-kubectl apply -f https://github.com/cloudamqp/lavinmq-operator/releases/download/<version>/install.yaml
-```
+its dependencies. The installation yaml is for this repo stored in GitHub Release assets.
 
 ## Contributing
 // TODO(user): Add detailed information on how you would like others to contribute to this project
