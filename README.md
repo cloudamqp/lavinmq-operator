@@ -85,7 +85,7 @@ You can apply the samples (examples) from the config/sample:
 kubectl apply -k config/samples/
 ```
 
->**NOTE**: Ensure that the samples has default values to test it out. For ETCD example to work, you also need to install the ETCD operator
+>**NOTE**: Ensure that the samples have default values to test it out. For ETCD example to work, you also need to install the ETCD operator
 
 ### To Uninstall
 **Undeploy the controller from the cluster:**
