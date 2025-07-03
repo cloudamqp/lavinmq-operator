@@ -88,7 +88,7 @@ kubectl apply -k config/samples/
 >**NOTE**: Ensure that the samples has default values to test it out. For ETCD example to work, you also need to install the ETCD operator
 
 ### To Uninstall
-**UnDeploy the controller from the cluster:**
+**Undeploy the controller from the cluster:**
 
 ```sh
 kubectl delete -f https://github.com/cloudamqp/lavinmq-operator/releases/download/<version>/install.yaml
