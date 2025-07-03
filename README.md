@@ -66,7 +66,7 @@ In `config/samples/`
 - docker version 17.03+.
 - kubectl version v1.11.3+.
 - Access to a Kubernetes v1.11.3+ cluster.
-- Permission enough to modify RBAC rules (cluster-admin)
+- Permissions to modify RBAC rules (cluster-admin)
 
 ### To Deploy on the cluster
 
