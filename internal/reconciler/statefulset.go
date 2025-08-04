@@ -144,7 +144,7 @@ func (b *StatefulSetReconciler) appendSpec(sts *appsv1.StatefulSet) *appsv1.Stat
 						StartupProbe: &corev1.Probe{
 							ProbeHandler: corev1.ProbeHandler{
 								Exec: &corev1.ExecAction{
-									Command: []string{"/usr/bin/lavinmqctl", "status"},
+									Command: []string{"/bin/sh", "-c", "/usr/bin/lavinmqctl status || /usr/bin/lavinmqctl status | grep -q follower"},
 								},
 							},
 							FailureThreshold: 30,
@@ -153,7 +153,7 @@ func (b *StatefulSetReconciler) appendSpec(sts *appsv1.StatefulSet) *appsv1.Stat
 						LivenessProbe: &corev1.Probe{
 							ProbeHandler: corev1.ProbeHandler{
 								Exec: &corev1.ExecAction{
-									Command: []string{"/usr/bin/lavinmqctl", "status"},
+									Command: []string{"/bin/sh", "-c", "/usr/bin/lavinmqctl status || /usr/bin/lavinmqctl status | grep -q follower"},
 								},
 							},
 							PeriodSeconds: 10,
@@ -161,7 +161,7 @@ func (b *StatefulSetReconciler) appendSpec(sts *appsv1.StatefulSet) *appsv1.Stat
 						ReadinessProbe: &corev1.Probe{
 							ProbeHandler: corev1.ProbeHandler{
 								Exec: &corev1.ExecAction{
-									Command: []string{"/usr/bin/lavinmqctl", "status"},
+									Command: []string{"/bin/sh", "-c", "/usr/bin/lavinmqctl status || /usr/bin/lavinmqctl status | grep -q follower"},
 								},
 							},
 							InitialDelaySeconds: 5,
