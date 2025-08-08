@@ -189,6 +189,19 @@ func InstallingOperator(projectimage string, kindClusterName string, kindCluster
 	return nil
 }
 
+func ListRunningPods() error {
+	fmt.Println("listing all running resources")
+	cmd := exec.Command("kubectl", "get", "all", "-A")
+	output, err := Run(cmd)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("%v", string(output))
+
+	return nil
+}
+
 func VerifyControllerUp(namespace string) error {
 	fmt.Println("validating that the controller-manager pod is running as expected")
 	cmd := exec.Command("kubectl", "get",
