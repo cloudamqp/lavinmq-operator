@@ -168,7 +168,7 @@ func SetupEtcdCluster(namespace string) error {
 func BuildingOperatorImage(projectimage string) error {
 	fmt.Println("building the manager(Operator) image")
 	os.Setenv("IMG", projectimage)
-	cmd := exec.Command("make", "docker-buildx", "build-installer")
+	cmd := exec.Command("make", "docker-build", "build-installer")
 	_, err := Run(cmd)
 	if err != nil {
 		return err
