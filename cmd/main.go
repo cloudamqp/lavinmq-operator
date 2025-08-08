@@ -154,6 +154,7 @@ func main() {
 	}
 
 	if os.Getenv("ENABLE_WEBHOOKS") == "true" {
+		setupLog.Info("Setting up webhook controller")
 		if err = (&cloudamqpcomv1alpha1.LavinMQ{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "LavinMQ")
 			os.Exit(1)
