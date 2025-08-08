@@ -186,6 +186,16 @@ func InstallingOperator(projectimage string, kindClusterName string, kindCluster
 		return err
 	}
 
+	// Wait for controller to be ready, which can take some time
+	cmd = exec.Command("kubectl", "wait", "deployment.apps/lavinmq-operator-controller-manager",
+		"--for", "condition=Available",
+		"--namespace", "lavinmq-operator-system",
+		"--timeout", "5m",
+	)
+	_, err = Run(cmd)
+	if err != nil {
+		return fmt.Errorf("failed to wait for controller to be ready: %w", err)
+	}
 	return nil
 }
 
