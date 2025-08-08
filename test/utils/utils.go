@@ -167,7 +167,8 @@ func SetupEtcdCluster(namespace string) error {
 
 func BuildingOperatorImage(projectimage string) error {
 	fmt.Println("building the manager(Operator) image")
-	cmd := exec.Command("make", "docker-build", fmt.Sprintf("IMG=%s", projectimage))
+	os.Setenv("IMG", projectimage)
+	cmd := exec.Command("make", "docker-buildx", "build-installer")
 	_, err := Run(cmd)
 	if err != nil {
 		return err
@@ -179,15 +180,8 @@ func BuildingOperatorImage(projectimage string) error {
 func InstallingOperator(projectimage string, kindClusterName string, kindCluster support.E2EClusterProvider) error {
 
 	fmt.Println("installing the Operator CRD")
-	cmd := exec.Command("make", "install")
+	cmd := exec.Command("kubectl", "apply", "-f", "dist/install.yaml")
 	_, err := Run(cmd)
-	if err != nil {
-		return err
-	}
-
-	fmt.Println("deploying the controller-manager")
-	cmd = exec.Command("make", "deploy", fmt.Sprintf("IMG=%s", projectimage))
-	_, err = Run(cmd)
 	if err != nil {
 		return err
 	}
