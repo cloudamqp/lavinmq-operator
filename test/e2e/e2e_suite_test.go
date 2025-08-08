@@ -90,7 +90,7 @@ func TestMain(m *testing.M) {
 		envfuncs.LoadImageToCluster(kindClusterName, projectimage),
 		func(ctx context.Context, cfg *envconf.Config) (context.Context, error) {
 			log.Println("Installing the operator...")
-			err := utils.InstallingOperator(projectimage, kindClusterName, kindCluster)
+			err := utils.InstallingOperator()
 			if err != nil {
 				return ctx, fmt.Errorf("failed to build and install operator: %w", err)
 			}

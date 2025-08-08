@@ -22,8 +22,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-
-	"sigs.k8s.io/e2e-framework/support"
 )
 
 const (
@@ -177,8 +175,7 @@ func BuildingOperatorImage(projectimage string) error {
 	return nil
 }
 
-func InstallingOperator(projectimage string, kindClusterName string, kindCluster support.E2EClusterProvider) error {
-
+func InstallingOperator() error {
 	fmt.Println("installing the Operator CRD")
 	cmd := exec.Command("kubectl", "apply", "-f", "dist/install.yaml")
 	_, err := Run(cmd)
@@ -196,19 +193,6 @@ func InstallingOperator(projectimage string, kindClusterName string, kindCluster
 	if err != nil {
 		return fmt.Errorf("failed to wait for controller to be ready: %w", err)
 	}
-	return nil
-}
-
-func ListRunningPods() error {
-	fmt.Println("listing all running resources")
-	cmd := exec.Command("kubectl", "get", "all", "-A")
-	output, err := Run(cmd)
-	if err != nil {
-		return err
-	}
-
-	fmt.Printf("%v", string(output))
-
 	return nil
 }
 
