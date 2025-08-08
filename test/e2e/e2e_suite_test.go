@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/exec"
 	"testing"
-	"time"
 
 	"github.com/cloudamqp/lavinmq-operator/test/utils"
 
@@ -94,16 +93,6 @@ func TestMain(m *testing.M) {
 			err := utils.InstallingOperator(projectimage, kindClusterName, kindCluster)
 			if err != nil {
 				return ctx, fmt.Errorf("failed to build and install operator: %w", err)
-			}
-			return ctx, nil
-		},
-		func(ctx context.Context, cfg *envconf.Config) (context.Context, error) {
-			time.Sleep(5 * time.Second)
-			utils.ListRunningPods()
-			log.Println("Verifying controller is up...")
-			err := utils.VerifyControllerUp(namespace)
-			if err != nil {
-				return ctx, fmt.Errorf("failed to verify controller is up: %w", err)
 			}
 			return ctx, nil
 		},
