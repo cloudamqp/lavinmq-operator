@@ -98,7 +98,7 @@ func TestCreatingCustomLavinMQ(t *testing.T) {
 
 		defer cleanupResources(t, lavinmq)
 
-		lavinmq.Spec.Image = "cloudamqp/lavinmq:2.3.0"
+		lavinmq.Spec.Image = "cloudamqp/lavinmq:2.4.1"
 		err := k8sClient.Create(t.Context(), lavinmq)
 
 		assert.NoErrorf(t, err, "Failed to create LavinMQ resource")
@@ -111,7 +111,7 @@ func TestCreatingCustomLavinMQ(t *testing.T) {
 
 		assert.NoErrorf(t, err, "Failed to get LavinMQ resource")
 
-		assert.Equal(t, "cloudamqp/lavinmq:2.3.0", resource.Spec.Image)
+		assert.Equal(t, "cloudamqp/lavinmq:2.4.1", resource.Spec.Image)
 	})
 
 	t.Run("Custom Replicas", func(t *testing.T) {
@@ -200,7 +200,7 @@ func TestUpdatingLavinMQ(t *testing.T) {
 
 		defer cleanupResources(t, lavinmq)
 
-		lavinmq.Spec.Image = "cloudamqp/lavinmq:2.2.0"
+		lavinmq.Spec.Image = "cloudamqp/lavinmq:2.4.1"
 		err := k8sClient.Create(t.Context(), lavinmq)
 
 		assert.NoErrorf(t, err, "Failed to create LavinMQ resource")
@@ -214,7 +214,7 @@ func TestUpdatingLavinMQ(t *testing.T) {
 
 		assert.NoErrorf(t, err, "Failed to reconcile")
 
-		lavinmq.Spec.Image = "cloudamqp/lavinmq:2.3.0"
+		lavinmq.Spec.Image = "cloudamqp/lavinmq:2.4.1"
 		err = k8sClient.Update(t.Context(), lavinmq)
 		assert.NoErrorf(t, err, "Failed to update LavinMQ resource")
 
@@ -235,7 +235,7 @@ func TestUpdatingLavinMQ(t *testing.T) {
 
 		assert.NoErrorf(t, err, "Failed to get StatefulSet")
 
-		assert.Equal(t, "cloudamqp/lavinmq:2.3.0", resource.Spec.Template.Spec.Containers[0].Image)
+		assert.Equal(t, "cloudamqp/lavinmq:2.4.1", resource.Spec.Template.Spec.Containers[0].Image)
 	})
 
 }

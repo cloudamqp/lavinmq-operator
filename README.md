@@ -27,7 +27,7 @@ Following [operator-sdks Capability Levels](https://sdk.operatorframework.io/doc
 The LavinMQ Operator supports a wide range of configurations, as defined in the `lavinmq_types.go` file. Here's a detailed description of the supported features and configurations:
 
 1. **Image Configuration:**
-   - The operator allows specifying a custom Docker image for LavinMQ using the `image` field. By default, it uses `cloudamqp/lavinmq:2.3.0`.
+   - The operator allows specifying a custom Docker image for LavinMQ using the `image` field. By default, it uses `cloudamqp/lavinmq:2.4.1`.
 
 2. **Replicas:**
    - You can configure the number of replicas for the LavinMQ cluster. The value must be between 1 and 3, with a default of 1.

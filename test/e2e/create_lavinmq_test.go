@@ -54,7 +54,7 @@ func TestCreateLavinMQ(t *testing.T) {
 				},
 				Spec: cloudamqpcomv1alpha1.LavinMQSpec{
 					Replicas: 1,
-					Image:    "cloudamqp/lavinmq:2.2.0",
+					Image:    "cloudamqp/lavinmq:2.4.1",
 					EtcdEndpoints: []string{
 						fmt.Sprintf("etcd-cluster-0.etcd-cluster.%s.svc.cluster.local:2379", namespace),
 						fmt.Sprintf("etcd-cluster-1.etcd-cluster.%s.svc.cluster.local:2379", namespace),

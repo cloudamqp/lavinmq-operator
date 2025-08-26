@@ -75,7 +75,7 @@ func GetDefaultInstance(settings *DefaultInstanceSettings) *cloudamqpcomv1alpha1
 	defaultNamespace := envconf.RandomName("namespace", 15)
 	defaultReplicas := int32(1) // Need to explicitly cast int to int32
 	defaultStorage := "10Gi"
-	defaultImage := "cloudamqp/lavinmq:2.3.0"
+	defaultImage := "cloudamqp/lavinmq:2.4.1"
 	defaultResources := corev1.ResourceRequirements{}
 	// --- --- --- --- --
 
