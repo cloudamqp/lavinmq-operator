@@ -66,7 +66,7 @@ func TestDefaultLavinMQ(t *testing.T) {
 
 	assert.NoErrorf(t, err, "Failed to get LavinMQ resource")
 
-	assert.Equal(t, "cloudamqp/lavinmq:2.3.0", resource.Spec.Image)
+	assert.Equal(t, "cloudamqp/lavinmq:2.4.1", resource.Spec.Image)
 	assert.Equal(t, int32(1), resource.Spec.Replicas)
 }
 
