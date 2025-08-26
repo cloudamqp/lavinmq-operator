@@ -7,7 +7,7 @@ metadata:
     app: lavinmq-sample
   name: lavinmq-sample
 spec:
-  image: cloudamqp/lavinmq:2.3.0
+  image: cloudamqp/lavinmq:2.4.1
   replicas: 3
   etcdEndpoints:
     - etcd-cluster-0.etcd-cluster.default.svc.cluster.local:2379

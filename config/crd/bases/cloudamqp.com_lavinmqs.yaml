@@ -399,7 +399,7 @@ spec:
                   type: string
                 type: array
               image:
-                default: cloudamqp/lavinmq:2.2.0
+                default: cloudamqp/lavinmq:2.4.1
                 type: string
               replicas:
                 default: 1
