@@ -219,8 +219,8 @@ func TestConfigHashAnnotation(t *testing.T) {
 	err = k8sClient.Get(t.Context(), types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, sts)
 	assert.NoErrorf(t, err, "Failed to get statefulset")
 
-	initialHash := sts.Spec.Template.ObjectMeta.Annotations["version-hash"]
-	assert.NotEmpty(t, initialHash, "Version hash annotation should be set")
+	initialHash := sts.Spec.Template.ObjectMeta.Annotations["config-hash"]
+	assert.NotEmpty(t, initialHash, "Config hash annotation should be set")
 
 	// Update ConfigMap
 	configMap.Data[reconciler.ConfigFileName] = "updated_config"
@@ -235,9 +235,9 @@ func TestConfigHashAnnotation(t *testing.T) {
 	err = k8sClient.Get(t.Context(), types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, sts)
 	assert.NoErrorf(t, err, "Failed to get updated statefulset")
 
-	updatedHash := sts.Spec.Template.ObjectMeta.Annotations["version-hash"]
-	assert.NotEmpty(t, updatedHash, "Version hash annotation should still be set")
-	assert.NotEqual(t, initialHash, updatedHash, "Version hash should change when ConfigMap content changes")
+	updatedHash := sts.Spec.Template.ObjectMeta.Annotations["config-hash"]
+	assert.NotEmpty(t, updatedHash, "Config hash annotation should still be set")
+	assert.NotEqual(t, initialHash, updatedHash, "Config hash should change when ConfigMap content changes")
 }
 
 func createConfigMap(t *testing.T, instance *cloudamqpcomv1alpha1.LavinMQ, config string) *corev1.ConfigMap {
