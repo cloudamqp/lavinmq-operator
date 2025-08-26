@@ -102,6 +102,7 @@ func (b *StatefulSetReconciler) appendSpec(sts *appsv1.StatefulSet) *appsv1.Stat
 				Annotations: make(map[string]string),
 			},
 			Spec: corev1.PodSpec{
+				NodeSelector: b.Instance.Spec.NodeSelector,
 				Containers: []corev1.Container{
 					{
 						Name:      "lavinmq",
@@ -349,6 +350,11 @@ func (b *StatefulSetReconciler) diffTemplate(old *corev1.PodSpec) {
 	if !reflect.DeepEqual(oldContainer.Ports, b.portsFromSpec()) {
 		b.Logger.Info("ports changed, updating")
 		oldContainer.Ports = b.portsFromSpec()
+	}
+
+	if !reflect.DeepEqual(old.NodeSelector, b.Instance.Spec.NodeSelector) {
+		b.Logger.Info("nodeSelector changed, updating")
+		old.NodeSelector = b.Instance.Spec.NodeSelector
 	}
 
 	index := slices.IndexFunc(old.Volumes, func(v corev1.Volume) bool {

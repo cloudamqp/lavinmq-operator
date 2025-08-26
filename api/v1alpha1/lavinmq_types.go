@@ -39,6 +39,10 @@ type LavinMQSpec struct {
 	// +optional
 	Replicas int32 `json:"replicas,omitempty"`
 
+	// Selector used to select the nodes on which the pods will be scheduled.
+	// +optional
+	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
+
 	// +optional
 	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
 

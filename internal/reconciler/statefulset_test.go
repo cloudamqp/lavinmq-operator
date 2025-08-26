@@ -133,7 +133,7 @@ func TestUpdateContainerResources(t *testing.T) {
 	err = k8sClient.Create(t.Context(), instance)
 	assert.NoErrorf(t, err, "Failed to create instance")
 
-	// Reconsiler is creating the sts
+	// Reconciler is creating the sts
 	_, err = rc.Reconcile(t.Context())
 	assert.NoErrorf(t, err, "Failed to reconcile instance")
 
@@ -152,6 +152,40 @@ func TestUpdateContainerResources(t *testing.T) {
 	assert.NoErrorf(t, err, "Failed to get statefulset")
 
 	assert.True(t, reflect.DeepEqual(Resources, sts.Spec.Template.Spec.Containers[0].Resources))
+}
+
+func TestStsNodeSelector(t *testing.T) {
+	t.Parallel()
+	selector := map[string]string{"disktype": "ssd"}
+	instance := testutils.GetDefaultInstance(&testutils.DefaultInstanceSettings{})
+	instance.Spec.NodeSelector = selector
+
+	err := testutils.CreateNamespace(t.Context(), k8sClient, instance.Namespace)
+	assert.NoErrorf(t, err, "Failed to create namespace")
+	defer testutils.DeleteNamespace(t.Context(), k8sClient, instance.Namespace)
+
+	configMap := createConfigMap(t, instance, "initial_config")
+	defer deleteConfigMap(t, configMap)
+
+	rc := &reconciler.StatefulSetReconciler{
+		ResourceReconciler: &reconciler.ResourceReconciler{
+			Instance: instance,
+			Scheme:   scheme.Scheme,
+			Client:   k8sClient,
+		},
+	}
+	err = k8sClient.Create(t.Context(), instance)
+	assert.NoErrorf(t, err, "Failed to create instance")
+
+	// Reconciler is creating the sts
+	_, err = rc.Reconcile(t.Context())
+	assert.NoErrorf(t, err, "Failed to reconcile instance")
+
+	sts := &appsv1.StatefulSet{}
+	err = k8sClient.Get(t.Context(), types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, sts)
+	assert.NoErrorf(t, err, "Failed to get statefulset")
+
+	assert.True(t, reflect.DeepEqual(selector, sts.Spec.Template.Spec.NodeSelector))
 }
 
 func TestConfigHashAnnotation(t *testing.T) {
@@ -185,8 +219,8 @@ func TestConfigHashAnnotation(t *testing.T) {
 	err = k8sClient.Get(t.Context(), types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, sts)
 	assert.NoErrorf(t, err, "Failed to get statefulset")
 
-	initialHash := sts.Spec.Template.ObjectMeta.Annotations["config-hash"]
-	assert.NotEmpty(t, initialHash, "Config hash annotation should be set")
+	initialHash := sts.Spec.Template.ObjectMeta.Annotations["version-hash"]
+	assert.NotEmpty(t, initialHash, "Version hash annotation should be set")
 
 	// Update ConfigMap
 	configMap.Data[reconciler.ConfigFileName] = "updated_config"
@@ -201,9 +235,9 @@ func TestConfigHashAnnotation(t *testing.T) {
 	err = k8sClient.Get(t.Context(), types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, sts)
 	assert.NoErrorf(t, err, "Failed to get updated statefulset")
 
-	updatedHash := sts.Spec.Template.ObjectMeta.Annotations["config-hash"]
-	assert.NotEmpty(t, updatedHash, "Config hash annotation should still be set")
-	assert.NotEqual(t, initialHash, updatedHash, "Config hash should change when ConfigMap content changes")
+	updatedHash := sts.Spec.Template.ObjectMeta.Annotations["version-hash"]
+	assert.NotEmpty(t, updatedHash, "Version hash annotation should still be set")
+	assert.NotEqual(t, initialHash, updatedHash, "Version hash should change when ConfigMap content changes")
 }
 
 func createConfigMap(t *testing.T, instance *cloudamqpcomv1alpha1.LavinMQ, config string) *corev1.ConfigMap {
