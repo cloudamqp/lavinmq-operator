@@ -200,7 +200,7 @@ func TestUpdatingLavinMQ(t *testing.T) {
 
 		defer cleanupResources(t, lavinmq)
 
-		lavinmq.Spec.Image = "cloudamqp/lavinmq:2.4.1"
+		lavinmq.Spec.Image = "cloudamqp/lavinmq:2.2.0"
 		err := k8sClient.Create(t.Context(), lavinmq)
 
 		assert.NoErrorf(t, err, "Failed to create LavinMQ resource")
