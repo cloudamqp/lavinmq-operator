@@ -195,7 +195,7 @@ func InstallingOperator() error {
 	}
 
 	cmd = exec.Command("kubectl", "wait", "validatingwebhookconfiguration/lavinmq-operator-validating-webhook-configuration",
-		"--for", "condition=Ready",
+		"--for", "create",
 		"--timeout", "2m")
 
 	_, err = Run(cmd)
