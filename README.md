@@ -151,6 +151,10 @@ file in the dist directory. This file contains all the resources built
 with Kustomize, which are necessary to install this project without
 its dependencies. The installation yaml is for this repo stored in GitHub Release assets.
 
+
+## Commercial Support
+Looking for commercial support for LavinMQ or requesting certain features for the operator? Reach out to us a contact@cloudamqp.com
+
 ## Contributing
 // TODO(user): Add detailed information on how you would like others to contribute to this project
 
