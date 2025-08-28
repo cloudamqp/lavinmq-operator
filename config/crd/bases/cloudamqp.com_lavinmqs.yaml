@@ -401,6 +401,12 @@ spec:
               image:
                 default: cloudamqp/lavinmq:2.4.1
                 type: string
+              nodeSelector:
+                additionalProperties:
+                  type: string
+                description: Selector used to select the nodes on which the pods will
+                  be scheduled.
+                type: object
               replicas:
                 default: 1
                 format: int32
