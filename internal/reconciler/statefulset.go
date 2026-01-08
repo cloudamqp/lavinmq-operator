@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"reflect"
 	"slices"
+	"strings"
 
 	"github.com/cloudamqp/lavinmq-operator/internal/controller/utils"
 	resource_utils "github.com/cloudamqp/lavinmq-operator/internal/reconciler/utils"
