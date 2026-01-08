@@ -1,0 +1,106 @@
+apiVersion: cloudamqp.com/v1alpha1
+kind: LavinMQ
+metadata:
+  name: lavinmq-multi-tenant
+spec:
+  replicas: 1
+  image: cloudamqp/lavinmq:2.4.1
+
+  resources:
+    requests:
+      cpu: 500m
+      memory: 256Mi
+    limits:
+      cpu: 1000m
+      memory: 512Mi
+
+  dataVolumeClaim:
+    accessModes:
+      - ReadWriteOnce
+    resources:
+      requests:
+        storage: 5Gi
+
+  config:
+    mgmt:
+      port: 15672
+      tls_port: 15671
+
+    amqp:
+      port: 5672
+      tls_port: 5671
+
+    mqtt:
+      port: 1883
+      tls_port: 8883
+
+    # SNI Configuration Examples
+    sni:
+      # Example 1: Basic SNI configuration with TLS secret
+      - hostname: "tenant1.example.com"
+        tlsSecret:
+          name: tenant1-tls-secret
+
+      # Example 2: SNI with mTLS (client certificate verification)
+      - hostname: "tenant2.example.com"
+        tlsSecret:
+          name: tenant2-tls-secret
+        tlsCaSecret:
+          name: tenant2-ca-secret
+        tls_verify_peer: true
+
+      # Example 3: Wildcard hostname
+      - hostname: "*.apps.example.com"
+        tlsSecret:
+          name: wildcard-apps-tls
+
+      # Example 4: SNI with protocol-specific TLS overrides
+      # Different certificates for AMQP and MQTT on the same hostname
+      - hostname: "multi-protocol.example.com"
+        tlsSecret:
+          name: default-multi-protocol-tls
+        amqp:
+          tlsSecret:
+            name: amqp-specific-tls
+        mqtt:
+          tlsSecret:
+            name: mqtt-specific-tls
+        http:
+          tlsSecret:
+            name: http-specific-tls
+
+      # Example 5: Protocol-specific mTLS configuration
+      - hostname: "secure.example.com"
+        tlsSecret:
+          name: secure-default-tls
+        amqp:
+          tlsSecret:
+            name: secure-amqp-tls
+          tlsCaSecret:
+            name: secure-amqp-ca
+          tls_verify_peer: true
+
+---
+# Example TLS Secret for tenant1
+# Create this secret with:
+# kubectl create secret tls tenant1-tls-secret --cert=path/to/tenant1.crt --key=path/to/tenant1.key
+apiVersion: v1
+kind: Secret
+metadata:
+  name: tenant1-tls-secret
+type: kubernetes.io/tls
+data:
+  tls.crt: LS0tLS1CRUdJTi... # Base64 encoded certificate
+  tls.key: LS0tLS1CRUdJTi... # Base64 encoded private key
+
+---
+# Example CA Secret for mTLS
+# Create this secret with:
+# kubectl create secret generic tenant2-ca-secret --from-file=ca.crt=path/to/ca.crt
+apiVersion: v1
+kind: Secret
+metadata:
+  name: tenant2-ca-secret
+type: Opaque
+data:
+  ca.crt: LS0tLS1CRUdJTi... # Base64 encoded CA certificate

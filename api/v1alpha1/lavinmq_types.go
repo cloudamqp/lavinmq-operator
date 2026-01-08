@@ -207,12 +207,60 @@ type ClusteringConfig struct {
 	MaxUnsyncedActions uint64 `json:"max_unsynced_actions,omitempty"`
 }
 
+// SniConfig defines TLS configuration for a specific hostname via SNI
+type SniConfig struct {
+	// Hostname for SNI (supports wildcards like *.example.com)
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinLength=1
+	Hostname string `json:"hostname"`
+
+	// Reference to a Kubernetes TLS secret containing tls.crt and tls.key
+	// +kubebuilder:validation:Required
+	TlsSecret corev1.SecretReference `json:"tlsSecret"`
+
+	// Optional reference to a CA certificate secret for mTLS
+	// +optional
+	TlsCaSecret *corev1.SecretReference `json:"tlsCaSecret,omitempty"`
+
+	// Enable client certificate verification
+	// +optional
+	TlsVerifyPeer bool `json:"tls_verify_peer,omitempty"`
+
+	// Protocol-specific overrides for AMQP
+	// +optional
+	Amqp *SniProtocolConfig `json:"amqp,omitempty"`
+
+	// Protocol-specific overrides for MQTT
+	// +optional
+	Mqtt *SniProtocolConfig `json:"mqtt,omitempty"`
+
+	// Protocol-specific overrides for HTTP
+	// +optional
+	Http *SniProtocolConfig `json:"http,omitempty"`
+}
+
+// SniProtocolConfig defines protocol-specific TLS overrides for SNI
+type SniProtocolConfig struct {
+	// Reference to a Kubernetes TLS secret for protocol-specific cert
+	// +optional
+	TlsSecret *corev1.SecretReference `json:"tlsSecret,omitempty"`
+
+	// Optional reference to a CA certificate secret
+	// +optional
+	TlsCaSecret *corev1.SecretReference `json:"tlsCaSecret,omitempty"`
+
+	// Enable client certificate verification (pointer to distinguish unset from false)
+	// +optional
+	TlsVerifyPeer *bool `json:"tls_verify_peer,omitempty"`
+}
+
 type LavinMQConfig struct {
 	Main       MainConfig       `json:"main,omitempty"`
 	Mgmt       MgmtConfig       `json:"mgmt,omitempty"`
 	Amqp       AmqpConfig       `json:"amqp,omitempty"`
 	Mqtt       MqttConfig       `json:"mqtt,omitempty"`
 	Clustering ClusteringConfig `json:"clustering,omitempty"`
+	Sni        []SniConfig      `json:"sni,omitempty"`
 }
 
 // LavinMQStatus defines the observed state of LavinMQ

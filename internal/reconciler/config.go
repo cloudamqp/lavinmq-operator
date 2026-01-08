@@ -97,6 +97,7 @@ func (b *ConfigReconciler) newObject() (*corev1.ConfigMap, error) {
 	b.AppendMqttConfig(cfg)
 	b.AppendMgmtConfig(cfg)
 	b.AppendClusteringConfig(cfg)
+	b.AppendSniConfig(cfg)
 
 	_, err = cfg.WriteTo(&config)
 	if err != nil {
@@ -228,6 +229,79 @@ func (b *ConfigReconciler) AppendMgmtConfig(cfg *ini.File) {
 	}
 
 	cfg.Section("mgmt").Key("port").SetValue(fmt.Sprintf("%d", mgmtConfig.Port))
+}
+
+func (b *ConfigReconciler) AppendSniConfig(cfg *ini.File) {
+	for _, sniConfig := range b.Instance.Spec.Config.Sni {
+		sectionName := fmt.Sprintf("sni:%s", sniConfig.Hostname)
+
+		// Base TLS configuration - always using mounted secrets
+		certPath := fmt.Sprintf("/etc/lavinmq/sni/%s/tls.crt", sniConfig.Hostname)
+		keyPath := fmt.Sprintf("/etc/lavinmq/sni/%s/tls.key", sniConfig.Hostname)
+		cfg.Section(sectionName).Key("tls_cert").SetValue(certPath)
+		cfg.Section(sectionName).Key("tls_key").SetValue(keyPath)
+
+		// CA certificate for mTLS (if provided)
+		if sniConfig.TlsCaSecret != nil {
+			caPath := fmt.Sprintf("/etc/lavinmq/sni/%s-ca/ca.crt", sniConfig.Hostname)
+			cfg.Section(sectionName).Key("tls_ca_cert").SetValue(caPath)
+		}
+
+		if sniConfig.TlsVerifyPeer {
+			cfg.Section(sectionName).Key("tls_verify_peer").SetValue("true")
+		}
+
+		// Protocol-specific overrides for AMQP
+		if sniConfig.Amqp != nil {
+			if sniConfig.Amqp.TlsSecret != nil {
+				amqpCertPath := fmt.Sprintf("/etc/lavinmq/sni/%s-amqp/tls.crt", sniConfig.Hostname)
+				amqpKeyPath := fmt.Sprintf("/etc/lavinmq/sni/%s-amqp/tls.key", sniConfig.Hostname)
+				cfg.Section(sectionName).Key("amqp_tls_cert").SetValue(amqpCertPath)
+				cfg.Section(sectionName).Key("amqp_tls_key").SetValue(amqpKeyPath)
+			}
+			if sniConfig.Amqp.TlsCaSecret != nil {
+				amqpCaPath := fmt.Sprintf("/etc/lavinmq/sni/%s-amqp-ca/ca.crt", sniConfig.Hostname)
+				cfg.Section(sectionName).Key("amqp_tls_ca_cert").SetValue(amqpCaPath)
+			}
+			if sniConfig.Amqp.TlsVerifyPeer != nil {
+				cfg.Section(sectionName).Key("amqp_tls_verify_peer").SetValue(fmt.Sprintf("%t", *sniConfig.Amqp.TlsVerifyPeer))
+			}
+		}
+
+		// Protocol-specific overrides for MQTT
+		if sniConfig.Mqtt != nil {
+			if sniConfig.Mqtt.TlsSecret != nil {
+				mqttCertPath := fmt.Sprintf("/etc/lavinmq/sni/%s-mqtt/tls.crt", sniConfig.Hostname)
+				mqttKeyPath := fmt.Sprintf("/etc/lavinmq/sni/%s-mqtt/tls.key", sniConfig.Hostname)
+				cfg.Section(sectionName).Key("mqtt_tls_cert").SetValue(mqttCertPath)
+				cfg.Section(sectionName).Key("mqtt_tls_key").SetValue(mqttKeyPath)
+			}
+			if sniConfig.Mqtt.TlsCaSecret != nil {
+				mqttCaPath := fmt.Sprintf("/etc/lavinmq/sni/%s-mqtt-ca/ca.crt", sniConfig.Hostname)
+				cfg.Section(sectionName).Key("mqtt_tls_ca_cert").SetValue(mqttCaPath)
+			}
+			if sniConfig.Mqtt.TlsVerifyPeer != nil {
+				cfg.Section(sectionName).Key("mqtt_tls_verify_peer").SetValue(fmt.Sprintf("%t", *sniConfig.Mqtt.TlsVerifyPeer))
+			}
+		}
+
+		// Protocol-specific overrides for HTTP
+		if sniConfig.Http != nil {
+			if sniConfig.Http.TlsSecret != nil {
+				httpCertPath := fmt.Sprintf("/etc/lavinmq/sni/%s-http/tls.crt", sniConfig.Hostname)
+				httpKeyPath := fmt.Sprintf("/etc/lavinmq/sni/%s-http/tls.key", sniConfig.Hostname)
+				cfg.Section(sectionName).Key("http_tls_cert").SetValue(httpCertPath)
+				cfg.Section(sectionName).Key("http_tls_key").SetValue(httpKeyPath)
+			}
+			if sniConfig.Http.TlsCaSecret != nil {
+				httpCaPath := fmt.Sprintf("/etc/lavinmq/sni/%s-http-ca/ca.crt", sniConfig.Hostname)
+				cfg.Section(sectionName).Key("http_tls_ca_cert").SetValue(httpCaPath)
+			}
+			if sniConfig.Http.TlsVerifyPeer != nil {
+				cfg.Section(sectionName).Key("http_tls_verify_peer").SetValue(fmt.Sprintf("%t", *sniConfig.Http.TlsVerifyPeer))
+			}
+		}
+	}
 }
 
 func (b *ConfigReconciler) updateFields(_ context.Context, configMap *corev1.ConfigMap) error {
