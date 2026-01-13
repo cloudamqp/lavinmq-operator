@@ -224,8 +224,8 @@ func TestSniConfig(t *testing.T) {
 	port = 5679
 
 	[sni:example.com]
-	tls_cert = /etc/lavinmq/sni/example.com/tls.crt
-	tls_key = /etc/lavinmq/sni/example.com/tls.key
+	tls_cert = /etc/lavinmq/sni/example-com/tls.crt
+	tls_key = /etc/lavinmq/sni/example-com/tls.key
 	`
 
 	rc := &reconciler.ConfigReconciler{
@@ -288,9 +288,9 @@ func TestSniConfigWithMtls(t *testing.T) {
 	port = 5679
 
 	[sni:secure.example.com]
-	tls_cert = /etc/lavinmq/sni/secure.example.com/tls.crt
-	tls_key = /etc/lavinmq/sni/secure.example.com/tls.key
-	tls_ca_cert = /etc/lavinmq/sni/secure.example.com-ca/ca.crt
+	tls_cert = /etc/lavinmq/sni/secure-example-com/tls.crt
+	tls_key = /etc/lavinmq/sni/secure-example-com/tls.key
+	tls_ca_cert = /etc/lavinmq/sni/secure-example-com-ca/ca.crt
 	tls_verify_peer = true
 	`
 
@@ -367,15 +367,15 @@ func TestSniConfigWithProtocolOverrides(t *testing.T) {
 	port = 5679
 
 	[sni:multi-protocol.example.com]
-	tls_cert = /etc/lavinmq/sni/multi-protocol.example.com/tls.crt
-	tls_key = /etc/lavinmq/sni/multi-protocol.example.com/tls.key
-	amqp_tls_cert = /etc/lavinmq/sni/multi-protocol.example.com-amqp/tls.crt
-	amqp_tls_key = /etc/lavinmq/sni/multi-protocol.example.com-amqp/tls.key
+	tls_cert = /etc/lavinmq/sni/multi-protocol-example-com/tls.crt
+	tls_key = /etc/lavinmq/sni/multi-protocol-example-com/tls.key
+	amqp_tls_cert = /etc/lavinmq/sni/multi-protocol-example-com-amqp/tls.crt
+	amqp_tls_key = /etc/lavinmq/sni/multi-protocol-example-com-amqp/tls.key
 	amqp_tls_verify_peer = true
-	mqtt_tls_cert = /etc/lavinmq/sni/multi-protocol.example.com-mqtt/tls.crt
-	mqtt_tls_key = /etc/lavinmq/sni/multi-protocol.example.com-mqtt/tls.key
-	http_tls_cert = /etc/lavinmq/sni/multi-protocol.example.com-http/tls.crt
-	http_tls_key = /etc/lavinmq/sni/multi-protocol.example.com-http/tls.key
+	mqtt_tls_cert = /etc/lavinmq/sni/multi-protocol-example-com-mqtt/tls.crt
+	mqtt_tls_key = /etc/lavinmq/sni/multi-protocol-example-com-mqtt/tls.key
+	http_tls_cert = /etc/lavinmq/sni/multi-protocol-example-com-http/tls.crt
+	http_tls_key = /etc/lavinmq/sni/multi-protocol-example-com-http/tls.key
 	`
 
 	rc := &reconciler.ConfigReconciler{
@@ -446,16 +446,16 @@ func TestMultipleSniHosts(t *testing.T) {
 	port = 5679
 
 	[sni:tenant1.example.com]
-	tls_cert = /etc/lavinmq/sni/tenant1.example.com/tls.crt
-	tls_key = /etc/lavinmq/sni/tenant1.example.com/tls.key
+	tls_cert = /etc/lavinmq/sni/tenant1-example-com/tls.crt
+	tls_key = /etc/lavinmq/sni/tenant1-example-com/tls.key
 
 	[sni:tenant2.example.com]
-	tls_cert = /etc/lavinmq/sni/tenant2.example.com/tls.crt
-	tls_key = /etc/lavinmq/sni/tenant2.example.com/tls.key
+	tls_cert = /etc/lavinmq/sni/tenant2-example-com/tls.crt
+	tls_key = /etc/lavinmq/sni/tenant2-example-com/tls.key
 
 	[sni:*.wildcard.com]
-	tls_cert = /etc/lavinmq/sni/*.wildcard.com/tls.crt
-	tls_key = /etc/lavinmq/sni/*.wildcard.com/tls.key
+	tls_cert = /etc/lavinmq/sni/wildcard-wildcard-com/tls.crt
+	tls_key = /etc/lavinmq/sni/wildcard-wildcard-com/tls.key
 	`
 
 	rc := &reconciler.ConfigReconciler{

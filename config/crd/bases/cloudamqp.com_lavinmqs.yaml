@@ -552,7 +552,7 @@ spec:
                   type: string
                 type: array
               image:
-                default: cloudamqp/lavinmq:2.4.1
+                default: cloudamqp/lavinmq:2.7.0
                 type: string
               nodeSelector:
                 additionalProperties:

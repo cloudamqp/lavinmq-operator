@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"reflect"
 	"slices"
-	"strings"
 
 	"github.com/cloudamqp/lavinmq-operator/internal/controller/utils"
 	resource_utils "github.com/cloudamqp/lavinmq-operator/internal/reconciler/utils"
@@ -289,11 +288,11 @@ func (b *StatefulSetReconciler) appendSniVolumes(sts *appsv1.StatefulSet) {
 	}
 
 	for _, sniConfig := range sniConfigs {
-		sanitizedHostname := sanitizeHostnameForVolumeName(sniConfig.Hostname)
+		sanitizedHostname := SanitizeHostnameForPath(sniConfig.Hostname)
 
 		// Mount base TLS secret
 		volumeName := fmt.Sprintf("sni-%s", sanitizedHostname)
-		mountPath := fmt.Sprintf("/etc/lavinmq/sni/%s", sniConfig.Hostname)
+		mountPath := fmt.Sprintf("/etc/lavinmq/sni/%s", sanitizedHostname)
 
 		sts.Spec.Template.Spec.Containers[0].VolumeMounts = append(
 			sts.Spec.Template.Spec.Containers[0].VolumeMounts,
@@ -319,7 +318,7 @@ func (b *StatefulSetReconciler) appendSniVolumes(sts *appsv1.StatefulSet) {
 		// Mount CA secret if provided
 		if sniConfig.TlsCaSecret != nil {
 			caVolumeName := fmt.Sprintf("sni-%s-ca", sanitizedHostname)
-			caMountPath := fmt.Sprintf("/etc/lavinmq/sni/%s-ca", sniConfig.Hostname)
+			caMountPath := fmt.Sprintf("/etc/lavinmq/sni/%s-ca", sanitizedHostname)
 
 			sts.Spec.Template.Spec.Containers[0].VolumeMounts = append(
 				sts.Spec.Template.Spec.Containers[0].VolumeMounts,
@@ -347,7 +346,7 @@ func (b *StatefulSetReconciler) appendSniVolumes(sts *appsv1.StatefulSet) {
 		if sniConfig.Amqp != nil {
 			if sniConfig.Amqp.TlsSecret != nil {
 				amqpVolumeName := fmt.Sprintf("sni-%s-amqp", sanitizedHostname)
-				amqpMountPath := fmt.Sprintf("/etc/lavinmq/sni/%s-amqp", sniConfig.Hostname)
+				amqpMountPath := fmt.Sprintf("/etc/lavinmq/sni/%s-amqp", sanitizedHostname)
 
 				sts.Spec.Template.Spec.Containers[0].VolumeMounts = append(
 					sts.Spec.Template.Spec.Containers[0].VolumeMounts,
@@ -372,7 +371,7 @@ func (b *StatefulSetReconciler) appendSniVolumes(sts *appsv1.StatefulSet) {
 			}
 			if sniConfig.Amqp.TlsCaSecret != nil {
 				amqpCaVolumeName := fmt.Sprintf("sni-%s-amqp-ca", sanitizedHostname)
-				amqpCaMountPath := fmt.Sprintf("/etc/lavinmq/sni/%s-amqp-ca", sniConfig.Hostname)
+				amqpCaMountPath := fmt.Sprintf("/etc/lavinmq/sni/%s-amqp-ca", sanitizedHostname)
 
 				sts.Spec.Template.Spec.Containers[0].VolumeMounts = append(
 					sts.Spec.Template.Spec.Containers[0].VolumeMounts,
@@ -401,7 +400,7 @@ func (b *StatefulSetReconciler) appendSniVolumes(sts *appsv1.StatefulSet) {
 		if sniConfig.Mqtt != nil {
 			if sniConfig.Mqtt.TlsSecret != nil {
 				mqttVolumeName := fmt.Sprintf("sni-%s-mqtt", sanitizedHostname)
-				mqttMountPath := fmt.Sprintf("/etc/lavinmq/sni/%s-mqtt", sniConfig.Hostname)
+				mqttMountPath := fmt.Sprintf("/etc/lavinmq/sni/%s-mqtt", sanitizedHostname)
 
 				sts.Spec.Template.Spec.Containers[0].VolumeMounts = append(
 					sts.Spec.Template.Spec.Containers[0].VolumeMounts,
@@ -426,7 +425,7 @@ func (b *StatefulSetReconciler) appendSniVolumes(sts *appsv1.StatefulSet) {
 			}
 			if sniConfig.Mqtt.TlsCaSecret != nil {
 				mqttCaVolumeName := fmt.Sprintf("sni-%s-mqtt-ca", sanitizedHostname)
-				mqttCaMountPath := fmt.Sprintf("/etc/lavinmq/sni/%s-mqtt-ca", sniConfig.Hostname)
+				mqttCaMountPath := fmt.Sprintf("/etc/lavinmq/sni/%s-mqtt-ca", sanitizedHostname)
 
 				sts.Spec.Template.Spec.Containers[0].VolumeMounts = append(
 					sts.Spec.Template.Spec.Containers[0].VolumeMounts,
@@ -455,7 +454,7 @@ func (b *StatefulSetReconciler) appendSniVolumes(sts *appsv1.StatefulSet) {
 		if sniConfig.Http != nil {
 			if sniConfig.Http.TlsSecret != nil {
 				httpVolumeName := fmt.Sprintf("sni-%s-http", sanitizedHostname)
-				httpMountPath := fmt.Sprintf("/etc/lavinmq/sni/%s-http", sniConfig.Hostname)
+				httpMountPath := fmt.Sprintf("/etc/lavinmq/sni/%s-http", sanitizedHostname)
 
 				sts.Spec.Template.Spec.Containers[0].VolumeMounts = append(
 					sts.Spec.Template.Spec.Containers[0].VolumeMounts,
@@ -480,7 +479,7 @@ func (b *StatefulSetReconciler) appendSniVolumes(sts *appsv1.StatefulSet) {
 			}
 			if sniConfig.Http.TlsCaSecret != nil {
 				httpCaVolumeName := fmt.Sprintf("sni-%s-http-ca", sanitizedHostname)
-				httpCaMountPath := fmt.Sprintf("/etc/lavinmq/sni/%s-http-ca", sniConfig.Hostname)
+				httpCaMountPath := fmt.Sprintf("/etc/lavinmq/sni/%s-http-ca", sanitizedHostname)
 
 				sts.Spec.Template.Spec.Containers[0].VolumeMounts = append(
 					sts.Spec.Template.Spec.Containers[0].VolumeMounts,
@@ -505,22 +504,6 @@ func (b *StatefulSetReconciler) appendSniVolumes(sts *appsv1.StatefulSet) {
 			}
 		}
 	}
-}
-
-// sanitizeHostnameForVolumeName sanitizes a hostname for use in Kubernetes volume names
-// Volume names must match: [a-z0-9]([-a-z0-9]*[a-z0-9])?
-func sanitizeHostnameForVolumeName(hostname string) string {
-	sanitized := strings.ReplaceAll(hostname, ".", "-")
-	sanitized = strings.ReplaceAll(sanitized, "*", "wildcard")
-	sanitized = strings.ToLower(sanitized)
-	sanitized = strings.Trim(sanitized, "-")
-
-	if len(sanitized) > 63 {
-		sanitized = sanitized[:63]
-		sanitized = strings.TrimRight(sanitized, "-")
-	}
-
-	return sanitized
 }
 
 // Used to check if the configmap has changed and restarts the pods if there are any config changes by setting a annotation.

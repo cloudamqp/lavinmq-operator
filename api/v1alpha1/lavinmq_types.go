@@ -29,7 +29,7 @@ type LavinMQSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// +kubebuilder:default="cloudamqp/lavinmq:2.4.1"
+	// +kubebuilder:default="cloudamqp/lavinmq:2.7.0"
 	// +optional
 	Image string `json:"image,omitempty"`
 

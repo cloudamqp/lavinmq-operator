@@ -153,6 +153,7 @@ func TestValidateSniConfigValid(t *testing.T) {
 	t.Parallel()
 	lavinMQ := &LavinMQ{
 		Spec: LavinMQSpec{
+			Image: "cloudamqp/lavinmq:2.7.0",
 			Config: LavinMQConfig{
 				Sni: []SniConfig{
 					{
@@ -183,6 +184,7 @@ func TestValidateSniConfigValidUpdate(t *testing.T) {
 	t.Parallel()
 	oldLavinMQ := &LavinMQ{
 		Spec: LavinMQSpec{
+			Image: "cloudamqp/lavinmq:2.7.0",
 			Config: LavinMQConfig{
 				Sni: []SniConfig{
 					{
@@ -197,6 +199,7 @@ func TestValidateSniConfigValidUpdate(t *testing.T) {
 	}
 	newLavinMQ := &LavinMQ{
 		Spec: LavinMQSpec{
+			Image: "cloudamqp/lavinmq:2.7.0",
 			Config: LavinMQConfig{
 				Sni: []SniConfig{
 					{
