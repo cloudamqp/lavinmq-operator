@@ -216,11 +216,11 @@ type SniConfig struct {
 
 	// Reference to a Kubernetes TLS secret containing tls.crt and tls.key
 	// +kubebuilder:validation:Required
-	TlsSecret corev1.SecretReference `json:"tlsSecret"`
+	TlsSecret corev1.SecretReference `json:"tls_secret"`
 
 	// Optional reference to a CA certificate secret for mTLS
 	// +optional
-	TlsCaSecret *corev1.SecretReference `json:"tlsCaSecret,omitempty"`
+	TlsCaSecret *corev1.SecretReference `json:"tls_ca_secret,omitempty"`
 
 	// Enable client certificate verification
 	// +optional
@@ -243,11 +243,11 @@ type SniConfig struct {
 type SniProtocolConfig struct {
 	// Reference to a Kubernetes TLS secret for protocol-specific cert
 	// +optional
-	TlsSecret *corev1.SecretReference `json:"tlsSecret,omitempty"`
+	TlsSecret *corev1.SecretReference `json:"tls_secret,omitempty"`
 
 	// Optional reference to a CA certificate secret
 	// +optional
-	TlsCaSecret *corev1.SecretReference `json:"tlsCaSecret,omitempty"`
+	TlsCaSecret *corev1.SecretReference `json:"tls_ca_secret,omitempty"`
 
 	// Enable client certificate verification (pointer to distinguish unset from false)
 	// +optional

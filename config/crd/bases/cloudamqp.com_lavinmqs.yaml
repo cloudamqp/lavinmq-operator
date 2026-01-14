@@ -204,11 +204,7 @@ spec:
                         amqp:
                           description: Protocol-specific overrides for AMQP
                           properties:
-                            tls_verify_peer:
-                              description: Enable client certificate verification
-                                (pointer to distinguish unset from false)
-                              type: boolean
-                            tlsCaSecret:
+                            tls_ca_secret:
                               description: Optional reference to a CA certificate
                                 secret
                               properties:
@@ -222,7 +218,7 @@ spec:
                                   type: string
                               type: object
                               x-kubernetes-map-type: atomic
-                            tlsSecret:
+                            tls_secret:
                               description: Reference to a Kubernetes TLS secret for
                                 protocol-specific cert
                               properties:
@@ -236,6 +232,10 @@ spec:
                                   type: string
                               type: object
                               x-kubernetes-map-type: atomic
+                            tls_verify_peer:
+                              description: Enable client certificate verification
+                                (pointer to distinguish unset from false)
+                              type: boolean
                           type: object
                         hostname:
                           description: Hostname for SNI (supports wildcards like *.example.com)
@@ -244,11 +244,7 @@ spec:
                         http:
                           description: Protocol-specific overrides for HTTP
                           properties:
-                            tls_verify_peer:
-                              description: Enable client certificate verification
-                                (pointer to distinguish unset from false)
-                              type: boolean
-                            tlsCaSecret:
+                            tls_ca_secret:
                               description: Optional reference to a CA certificate
                                 secret
                               properties:
@@ -262,7 +258,7 @@ spec:
                                   type: string
                               type: object
                               x-kubernetes-map-type: atomic
-                            tlsSecret:
+                            tls_secret:
                               description: Reference to a Kubernetes TLS secret for
                                 protocol-specific cert
                               properties:
@@ -276,15 +272,15 @@ spec:
                                   type: string
                               type: object
                               x-kubernetes-map-type: atomic
+                            tls_verify_peer:
+                              description: Enable client certificate verification
+                                (pointer to distinguish unset from false)
+                              type: boolean
                           type: object
                         mqtt:
                           description: Protocol-specific overrides for MQTT
                           properties:
-                            tls_verify_peer:
-                              description: Enable client certificate verification
-                                (pointer to distinguish unset from false)
-                              type: boolean
-                            tlsCaSecret:
+                            tls_ca_secret:
                               description: Optional reference to a CA certificate
                                 secret
                               properties:
@@ -298,7 +294,7 @@ spec:
                                   type: string
                               type: object
                               x-kubernetes-map-type: atomic
-                            tlsSecret:
+                            tls_secret:
                               description: Reference to a Kubernetes TLS secret for
                                 protocol-specific cert
                               properties:
@@ -312,11 +308,12 @@ spec:
                                   type: string
                               type: object
                               x-kubernetes-map-type: atomic
+                            tls_verify_peer:
+                              description: Enable client certificate verification
+                                (pointer to distinguish unset from false)
+                              type: boolean
                           type: object
-                        tls_verify_peer:
-                          description: Enable client certificate verification
-                          type: boolean
-                        tlsCaSecret:
+                        tls_ca_secret:
                           description: Optional reference to a CA certificate secret
                             for mTLS
                           properties:
@@ -330,7 +327,7 @@ spec:
                               type: string
                           type: object
                           x-kubernetes-map-type: atomic
-                        tlsSecret:
+                        tls_secret:
                           description: Reference to a Kubernetes TLS secret containing
                             tls.crt and tls.key
                           properties:
@@ -344,9 +341,12 @@ spec:
                               type: string
                           type: object
                           x-kubernetes-map-type: atomic
+                        tls_verify_peer:
+                          description: Enable client certificate verification
+                          type: boolean
                       required:
                       - hostname
-                      - tlsSecret
+                      - tls_secret
                       type: object
                     type: array
                 type: object
