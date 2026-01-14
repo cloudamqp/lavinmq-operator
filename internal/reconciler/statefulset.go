@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"slices"
 
+	v1alpha1 "github.com/cloudamqp/lavinmq-operator/api/v1alpha1"
 	"github.com/cloudamqp/lavinmq-operator/internal/controller/utils"
 	resource_utils "github.com/cloudamqp/lavinmq-operator/internal/reconciler/utils"
 
@@ -281,6 +282,60 @@ func (b *StatefulSetReconciler) appendTlsConfig(sts *appsv1.StatefulSet) {
 	)
 }
 
+// mountSniSecret mounts a secret volume for SNI configuration
+func (b *StatefulSetReconciler) mountSniSecret(
+	sts *appsv1.StatefulSet,
+	secretName string,
+	volumeSuffix string,
+	sanitizedHostname string,
+) {
+	volumeName := fmt.Sprintf("sni-%s%s", sanitizedHostname, volumeSuffix)
+	mountPath := fmt.Sprintf("/etc/lavinmq/sni/%s%s", sanitizedHostname, volumeSuffix)
+
+	sts.Spec.Template.Spec.Containers[0].VolumeMounts = append(
+		sts.Spec.Template.Spec.Containers[0].VolumeMounts,
+		corev1.VolumeMount{
+			Name:      volumeName,
+			MountPath: mountPath,
+			ReadOnly:  true,
+		},
+	)
+
+	sts.Spec.Template.Spec.Volumes = append(
+		sts.Spec.Template.Spec.Volumes,
+		corev1.Volume{
+			Name: volumeName,
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: secretName,
+				},
+			},
+		},
+	)
+}
+
+// mountProtocolSniSecrets mounts protocol-specific SNI secrets
+func (b *StatefulSetReconciler) mountProtocolSniSecrets(
+	sts *appsv1.StatefulSet,
+	protocol string,
+	protocolConfig *v1alpha1.SniProtocolConfig,
+	sanitizedHostname string,
+) {
+	if protocolConfig == nil {
+		return
+	}
+
+	if protocolConfig.TlsSecret != nil {
+		suffix := fmt.Sprintf("-%s", protocol)
+		b.mountSniSecret(sts, protocolConfig.TlsSecret.Name, suffix, sanitizedHostname)
+	}
+
+	if protocolConfig.TlsCaSecret != nil {
+		suffix := fmt.Sprintf("-%s-ca", protocol)
+		b.mountSniSecret(sts, protocolConfig.TlsCaSecret.Name, suffix, sanitizedHostname)
+	}
+}
+
 func (b *StatefulSetReconciler) appendSniVolumes(sts *appsv1.StatefulSet) {
 	sniConfigs := b.Instance.Spec.Config.Sni
 	if len(sniConfigs) == 0 {
@@ -291,218 +346,17 @@ func (b *StatefulSetReconciler) appendSniVolumes(sts *appsv1.StatefulSet) {
 		sanitizedHostname := SanitizeHostnameForPath(sniConfig.Hostname)
 
 		// Mount base TLS secret
-		volumeName := fmt.Sprintf("sni-%s", sanitizedHostname)
-		mountPath := fmt.Sprintf("/etc/lavinmq/sni/%s", sanitizedHostname)
-
-		sts.Spec.Template.Spec.Containers[0].VolumeMounts = append(
-			sts.Spec.Template.Spec.Containers[0].VolumeMounts,
-			corev1.VolumeMount{
-				Name:      volumeName,
-				MountPath: mountPath,
-				ReadOnly:  true,
-			},
-		)
-
-		sts.Spec.Template.Spec.Volumes = append(
-			sts.Spec.Template.Spec.Volumes,
-			corev1.Volume{
-				Name: volumeName,
-				VolumeSource: corev1.VolumeSource{
-					Secret: &corev1.SecretVolumeSource{
-						SecretName: sniConfig.TlsSecret.Name,
-					},
-				},
-			},
-		)
+		b.mountSniSecret(sts, sniConfig.TlsSecret.Name, "", sanitizedHostname)
 
 		// Mount CA secret if provided
 		if sniConfig.TlsCaSecret != nil {
-			caVolumeName := fmt.Sprintf("sni-%s-ca", sanitizedHostname)
-			caMountPath := fmt.Sprintf("/etc/lavinmq/sni/%s-ca", sanitizedHostname)
-
-			sts.Spec.Template.Spec.Containers[0].VolumeMounts = append(
-				sts.Spec.Template.Spec.Containers[0].VolumeMounts,
-				corev1.VolumeMount{
-					Name:      caVolumeName,
-					MountPath: caMountPath,
-					ReadOnly:  true,
-				},
-			)
-
-			sts.Spec.Template.Spec.Volumes = append(
-				sts.Spec.Template.Spec.Volumes,
-				corev1.Volume{
-					Name: caVolumeName,
-					VolumeSource: corev1.VolumeSource{
-						Secret: &corev1.SecretVolumeSource{
-							SecretName: sniConfig.TlsCaSecret.Name,
-						},
-					},
-				},
-			)
+			b.mountSniSecret(sts, sniConfig.TlsCaSecret.Name, "-ca", sanitizedHostname)
 		}
 
-		// Mount protocol-specific secrets for AMQP
-		if sniConfig.Amqp != nil {
-			if sniConfig.Amqp.TlsSecret != nil {
-				amqpVolumeName := fmt.Sprintf("sni-%s-amqp", sanitizedHostname)
-				amqpMountPath := fmt.Sprintf("/etc/lavinmq/sni/%s-amqp", sanitizedHostname)
-
-				sts.Spec.Template.Spec.Containers[0].VolumeMounts = append(
-					sts.Spec.Template.Spec.Containers[0].VolumeMounts,
-					corev1.VolumeMount{
-						Name:      amqpVolumeName,
-						MountPath: amqpMountPath,
-						ReadOnly:  true,
-					},
-				)
-
-				sts.Spec.Template.Spec.Volumes = append(
-					sts.Spec.Template.Spec.Volumes,
-					corev1.Volume{
-						Name: amqpVolumeName,
-						VolumeSource: corev1.VolumeSource{
-							Secret: &corev1.SecretVolumeSource{
-								SecretName: sniConfig.Amqp.TlsSecret.Name,
-							},
-						},
-					},
-				)
-			}
-			if sniConfig.Amqp.TlsCaSecret != nil {
-				amqpCaVolumeName := fmt.Sprintf("sni-%s-amqp-ca", sanitizedHostname)
-				amqpCaMountPath := fmt.Sprintf("/etc/lavinmq/sni/%s-amqp-ca", sanitizedHostname)
-
-				sts.Spec.Template.Spec.Containers[0].VolumeMounts = append(
-					sts.Spec.Template.Spec.Containers[0].VolumeMounts,
-					corev1.VolumeMount{
-						Name:      amqpCaVolumeName,
-						MountPath: amqpCaMountPath,
-						ReadOnly:  true,
-					},
-				)
-
-				sts.Spec.Template.Spec.Volumes = append(
-					sts.Spec.Template.Spec.Volumes,
-					corev1.Volume{
-						Name: amqpCaVolumeName,
-						VolumeSource: corev1.VolumeSource{
-							Secret: &corev1.SecretVolumeSource{
-								SecretName: sniConfig.Amqp.TlsCaSecret.Name,
-							},
-						},
-					},
-				)
-			}
-		}
-
-		// Mount protocol-specific secrets for MQTT
-		if sniConfig.Mqtt != nil {
-			if sniConfig.Mqtt.TlsSecret != nil {
-				mqttVolumeName := fmt.Sprintf("sni-%s-mqtt", sanitizedHostname)
-				mqttMountPath := fmt.Sprintf("/etc/lavinmq/sni/%s-mqtt", sanitizedHostname)
-
-				sts.Spec.Template.Spec.Containers[0].VolumeMounts = append(
-					sts.Spec.Template.Spec.Containers[0].VolumeMounts,
-					corev1.VolumeMount{
-						Name:      mqttVolumeName,
-						MountPath: mqttMountPath,
-						ReadOnly:  true,
-					},
-				)
-
-				sts.Spec.Template.Spec.Volumes = append(
-					sts.Spec.Template.Spec.Volumes,
-					corev1.Volume{
-						Name: mqttVolumeName,
-						VolumeSource: corev1.VolumeSource{
-							Secret: &corev1.SecretVolumeSource{
-								SecretName: sniConfig.Mqtt.TlsSecret.Name,
-							},
-						},
-					},
-				)
-			}
-			if sniConfig.Mqtt.TlsCaSecret != nil {
-				mqttCaVolumeName := fmt.Sprintf("sni-%s-mqtt-ca", sanitizedHostname)
-				mqttCaMountPath := fmt.Sprintf("/etc/lavinmq/sni/%s-mqtt-ca", sanitizedHostname)
-
-				sts.Spec.Template.Spec.Containers[0].VolumeMounts = append(
-					sts.Spec.Template.Spec.Containers[0].VolumeMounts,
-					corev1.VolumeMount{
-						Name:      mqttCaVolumeName,
-						MountPath: mqttCaMountPath,
-						ReadOnly:  true,
-					},
-				)
-
-				sts.Spec.Template.Spec.Volumes = append(
-					sts.Spec.Template.Spec.Volumes,
-					corev1.Volume{
-						Name: mqttCaVolumeName,
-						VolumeSource: corev1.VolumeSource{
-							Secret: &corev1.SecretVolumeSource{
-								SecretName: sniConfig.Mqtt.TlsCaSecret.Name,
-							},
-						},
-					},
-				)
-			}
-		}
-
-		// Mount protocol-specific secrets for HTTP
-		if sniConfig.Http != nil {
-			if sniConfig.Http.TlsSecret != nil {
-				httpVolumeName := fmt.Sprintf("sni-%s-http", sanitizedHostname)
-				httpMountPath := fmt.Sprintf("/etc/lavinmq/sni/%s-http", sanitizedHostname)
-
-				sts.Spec.Template.Spec.Containers[0].VolumeMounts = append(
-					sts.Spec.Template.Spec.Containers[0].VolumeMounts,
-					corev1.VolumeMount{
-						Name:      httpVolumeName,
-						MountPath: httpMountPath,
-						ReadOnly:  true,
-					},
-				)
-
-				sts.Spec.Template.Spec.Volumes = append(
-					sts.Spec.Template.Spec.Volumes,
-					corev1.Volume{
-						Name: httpVolumeName,
-						VolumeSource: corev1.VolumeSource{
-							Secret: &corev1.SecretVolumeSource{
-								SecretName: sniConfig.Http.TlsSecret.Name,
-							},
-						},
-					},
-				)
-			}
-			if sniConfig.Http.TlsCaSecret != nil {
-				httpCaVolumeName := fmt.Sprintf("sni-%s-http-ca", sanitizedHostname)
-				httpCaMountPath := fmt.Sprintf("/etc/lavinmq/sni/%s-http-ca", sanitizedHostname)
-
-				sts.Spec.Template.Spec.Containers[0].VolumeMounts = append(
-					sts.Spec.Template.Spec.Containers[0].VolumeMounts,
-					corev1.VolumeMount{
-						Name:      httpCaVolumeName,
-						MountPath: httpCaMountPath,
-						ReadOnly:  true,
-					},
-				)
-
-				sts.Spec.Template.Spec.Volumes = append(
-					sts.Spec.Template.Spec.Volumes,
-					corev1.Volume{
-						Name: httpCaVolumeName,
-						VolumeSource: corev1.VolumeSource{
-							Secret: &corev1.SecretVolumeSource{
-								SecretName: sniConfig.Http.TlsCaSecret.Name,
-							},
-						},
-					},
-				)
-			}
-		}
+		// Mount protocol-specific secrets
+		b.mountProtocolSniSecrets(sts, "amqp", sniConfig.Amqp, sanitizedHostname)
+		b.mountProtocolSniSecrets(sts, "mqtt", sniConfig.Mqtt, sanitizedHostname)
+		b.mountProtocolSniSecrets(sts, "http", sniConfig.Http, sanitizedHostname)
 	}
 }
 

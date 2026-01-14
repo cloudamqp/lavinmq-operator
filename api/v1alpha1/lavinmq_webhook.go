@@ -19,6 +19,7 @@ package v1alpha1
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -85,13 +86,14 @@ func (r *LavinMQ) ValidateDelete(ctx context.Context, obj runtime.Object) (admis
 
 // validateSniConfig validates SNI configuration
 func validateSniConfig(sniConfigs []SniConfig) error {
-	// Check for duplicate hostnames
+	// Check for duplicate hostnames (case-insensitive, as per RFC)
 	seen := make(map[string]bool)
 	for _, sniConfig := range sniConfigs {
-		if seen[sniConfig.Hostname] {
+		normalized := strings.ToLower(sniConfig.Hostname)
+		if seen[normalized] {
 			return fmt.Errorf("duplicate SNI hostname: %s", sniConfig.Hostname)
 		}
-		seen[sniConfig.Hostname] = true
+		seen[normalized] = true
 	}
 
 	return nil
