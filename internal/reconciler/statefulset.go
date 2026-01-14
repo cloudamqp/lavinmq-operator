@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"slices"
 
+	v1alpha1 "github.com/cloudamqp/lavinmq-operator/api/v1alpha1"
 	"github.com/cloudamqp/lavinmq-operator/internal/controller/utils"
 	resource_utils "github.com/cloudamqp/lavinmq-operator/internal/reconciler/utils"
 
@@ -80,6 +81,7 @@ func (b *StatefulSetReconciler) newObject(ctx context.Context) (*appsv1.Stateful
 
 	b.appendSpec(sts)
 	b.appendTlsConfig(sts)
+	b.appendSniVolumes(sts)
 	if err := b.setConfigHashAnnotation(ctx, sts); err != nil {
 		return nil, err
 	}
@@ -278,6 +280,84 @@ func (b *StatefulSetReconciler) appendTlsConfig(sts *appsv1.StatefulSet) {
 			},
 		},
 	)
+}
+
+// mountSniSecret mounts a secret volume for SNI configuration
+func (b *StatefulSetReconciler) mountSniSecret(
+	sts *appsv1.StatefulSet,
+	secretName string,
+	volumeSuffix string,
+	sanitizedHostname string,
+) {
+	volumeName := fmt.Sprintf("sni-%s%s", sanitizedHostname, volumeSuffix)
+	mountPath := fmt.Sprintf("/etc/lavinmq/sni/%s%s", sanitizedHostname, volumeSuffix)
+
+	sts.Spec.Template.Spec.Containers[0].VolumeMounts = append(
+		sts.Spec.Template.Spec.Containers[0].VolumeMounts,
+		corev1.VolumeMount{
+			Name:      volumeName,
+			MountPath: mountPath,
+			ReadOnly:  true,
+		},
+	)
+
+	sts.Spec.Template.Spec.Volumes = append(
+		sts.Spec.Template.Spec.Volumes,
+		corev1.Volume{
+			Name: volumeName,
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: secretName,
+				},
+			},
+		},
+	)
+}
+
+// mountProtocolSniSecrets mounts protocol-specific SNI secrets
+func (b *StatefulSetReconciler) mountProtocolSniSecrets(
+	sts *appsv1.StatefulSet,
+	protocol string,
+	protocolConfig *v1alpha1.SniProtocolConfig,
+	sanitizedHostname string,
+) {
+	if protocolConfig == nil {
+		return
+	}
+
+	if protocolConfig.TlsSecret != nil {
+		suffix := fmt.Sprintf("-%s", protocol)
+		b.mountSniSecret(sts, protocolConfig.TlsSecret.Name, suffix, sanitizedHostname)
+	}
+
+	if protocolConfig.TlsCaSecret != nil {
+		suffix := fmt.Sprintf("-%s-ca", protocol)
+		b.mountSniSecret(sts, protocolConfig.TlsCaSecret.Name, suffix, sanitizedHostname)
+	}
+}
+
+func (b *StatefulSetReconciler) appendSniVolumes(sts *appsv1.StatefulSet) {
+	sniConfigs := b.Instance.Spec.Config.Sni
+	if len(sniConfigs) == 0 {
+		return
+	}
+
+	for _, sniConfig := range sniConfigs {
+		sanitizedHostname := SanitizeHostnameForPath(sniConfig.Hostname)
+
+		// Mount base TLS secret
+		b.mountSniSecret(sts, sniConfig.TlsSecret.Name, "", sanitizedHostname)
+
+		// Mount CA secret if provided
+		if sniConfig.TlsCaSecret != nil {
+			b.mountSniSecret(sts, sniConfig.TlsCaSecret.Name, "-ca", sanitizedHostname)
+		}
+
+		// Mount protocol-specific secrets
+		b.mountProtocolSniSecrets(sts, "amqp", sniConfig.Amqp, sanitizedHostname)
+		b.mountProtocolSniSecrets(sts, "mqtt", sniConfig.Mqtt, sanitizedHostname)
+		b.mountProtocolSniSecrets(sts, "http", sniConfig.Http, sanitizedHostname)
+	}
 }
 
 // Used to check if the configmap has changed and restarts the pods if there are any config changes by setting a annotation.

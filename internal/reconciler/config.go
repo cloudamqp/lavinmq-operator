@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"strings"
 
+	v1alpha1 "github.com/cloudamqp/lavinmq-operator/api/v1alpha1"
 	"github.com/cloudamqp/lavinmq-operator/internal/controller/utils"
 
 	ini "gopkg.in/ini.v1"
@@ -97,6 +98,7 @@ func (b *ConfigReconciler) newObject() (*corev1.ConfigMap, error) {
 	b.AppendMqttConfig(cfg)
 	b.AppendMgmtConfig(cfg)
 	b.AppendClusteringConfig(cfg)
+	b.AppendSniConfig(cfg)
 
 	_, err = cfg.WriteTo(&config)
 	if err != nil {
@@ -228,6 +230,65 @@ func (b *ConfigReconciler) AppendMgmtConfig(cfg *ini.File) {
 	}
 
 	cfg.Section("mgmt").Key("port").SetValue(fmt.Sprintf("%d", mgmtConfig.Port))
+}
+
+// appendProtocolTlsConfig adds protocol-specific TLS configuration to a SNI section
+func (b *ConfigReconciler) appendProtocolTlsConfig(
+	cfg *ini.File,
+	sectionName string,
+	protocol string, // "amqp", "mqtt", or "http"
+	protocolConfig *v1alpha1.SniProtocolConfig,
+	sanitizedHostname string,
+) {
+	if protocolConfig == nil {
+		return
+	}
+
+	prefix := protocol + "_"
+
+	if protocolConfig.TlsSecret != nil {
+		certPath := fmt.Sprintf("/etc/lavinmq/sni/%s-%s/tls.crt", sanitizedHostname, protocol)
+		keyPath := fmt.Sprintf("/etc/lavinmq/sni/%s-%s/tls.key", sanitizedHostname, protocol)
+		cfg.Section(sectionName).Key(prefix + "tls_cert").SetValue(certPath)
+		cfg.Section(sectionName).Key(prefix + "tls_key").SetValue(keyPath)
+	}
+
+	if protocolConfig.TlsCaSecret != nil {
+		caPath := fmt.Sprintf("/etc/lavinmq/sni/%s-%s-ca/ca.crt", sanitizedHostname, protocol)
+		cfg.Section(sectionName).Key(prefix + "tls_ca_cert").SetValue(caPath)
+	}
+
+	if protocolConfig.TlsVerifyPeer != nil {
+		cfg.Section(sectionName).Key(prefix + "tls_verify_peer").SetValue(fmt.Sprintf("%t", *protocolConfig.TlsVerifyPeer))
+	}
+}
+
+func (b *ConfigReconciler) AppendSniConfig(cfg *ini.File) {
+	for _, sniConfig := range b.Instance.Spec.Config.Sni {
+		sectionName := fmt.Sprintf("sni:%s", sniConfig.Hostname)
+		sanitizedHostname := SanitizeHostnameForPath(sniConfig.Hostname)
+
+		// Base TLS configuration - always using mounted secrets
+		certPath := fmt.Sprintf("/etc/lavinmq/sni/%s/tls.crt", sanitizedHostname)
+		keyPath := fmt.Sprintf("/etc/lavinmq/sni/%s/tls.key", sanitizedHostname)
+		cfg.Section(sectionName).Key("tls_cert").SetValue(certPath)
+		cfg.Section(sectionName).Key("tls_key").SetValue(keyPath)
+
+		// CA certificate for mTLS (if provided)
+		if sniConfig.TlsCaSecret != nil {
+			caPath := fmt.Sprintf("/etc/lavinmq/sni/%s-ca/ca.crt", sanitizedHostname)
+			cfg.Section(sectionName).Key("tls_ca_cert").SetValue(caPath)
+		}
+
+		if sniConfig.TlsVerifyPeer {
+			cfg.Section(sectionName).Key("tls_verify_peer").SetValue("true")
+		}
+
+		// Protocol-specific overrides
+		b.appendProtocolTlsConfig(cfg, sectionName, "amqp", sniConfig.Amqp, sanitizedHostname)
+		b.appendProtocolTlsConfig(cfg, sectionName, "mqtt", sniConfig.Mqtt, sanitizedHostname)
+		b.appendProtocolTlsConfig(cfg, sectionName, "http", sniConfig.Http, sanitizedHostname)
+	}
 }
 
 func (b *ConfigReconciler) updateFields(_ context.Context, configMap *corev1.ConfigMap) error {

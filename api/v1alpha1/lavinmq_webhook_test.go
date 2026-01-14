@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	corev1 "k8s.io/api/core/v1"
 )
 
 func TestCreateDefault(t *testing.T) {
@@ -119,4 +120,104 @@ func TestDeleteDefault(t *testing.T) {
 	lavinMQ := &LavinMQ{}
 	_, err := lavinMQ.ValidateDelete(context.TODO(), lavinMQ)
 	assert.NoErrorf(t, err, "Failed to validate update")
+}
+
+func TestValidateSniConfigDuplicateHostname(t *testing.T) {
+	t.Parallel()
+	lavinMQ := &LavinMQ{
+		Spec: LavinMQSpec{
+			Config: LavinMQConfig{
+				Sni: []SniConfig{
+					{
+						Hostname: "example.com",
+						TlsSecret: corev1.SecretReference{
+							Name: "cert1",
+						},
+					},
+					{
+						Hostname: "example.com",
+						TlsSecret: corev1.SecretReference{
+							Name: "cert2",
+						},
+					},
+				},
+			},
+		},
+	}
+	_, err := lavinMQ.ValidateCreate(context.TODO(), lavinMQ)
+	assert.Errorf(t, err, "Expected error for duplicate hostname")
+	assert.Contains(t, err.Error(), "duplicate SNI hostname")
+}
+
+func TestValidateSniConfigValid(t *testing.T) {
+	t.Parallel()
+	lavinMQ := &LavinMQ{
+		Spec: LavinMQSpec{
+			Image: "cloudamqp/lavinmq:2.7.0",
+			Config: LavinMQConfig{
+				Sni: []SniConfig{
+					{
+						Hostname: "app1.example.com",
+						TlsSecret: corev1.SecretReference{
+							Name: "app1-tls",
+						},
+					},
+					{
+						Hostname: "*.wildcard.com",
+						TlsSecret: corev1.SecretReference{
+							Name: "wildcard-tls",
+						},
+						TlsCaSecret: &corev1.SecretReference{
+							Name: "wildcard-ca",
+						},
+						TlsVerifyPeer: true,
+					},
+				},
+			},
+		},
+	}
+	_, err := lavinMQ.ValidateCreate(context.TODO(), lavinMQ)
+	assert.NoErrorf(t, err, "Valid SNI config should not error")
+}
+
+func TestValidateSniConfigValidUpdate(t *testing.T) {
+	t.Parallel()
+	oldLavinMQ := &LavinMQ{
+		Spec: LavinMQSpec{
+			Image: "cloudamqp/lavinmq:2.7.0",
+			Config: LavinMQConfig{
+				Sni: []SniConfig{
+					{
+						Hostname: "example.com",
+						TlsSecret: corev1.SecretReference{
+							Name: "old-cert",
+						},
+					},
+				},
+			},
+		},
+	}
+	newLavinMQ := &LavinMQ{
+		Spec: LavinMQSpec{
+			Image: "cloudamqp/lavinmq:2.7.0",
+			Config: LavinMQConfig{
+				Sni: []SniConfig{
+					{
+						Hostname: "example.com",
+						TlsSecret: corev1.SecretReference{
+							Name: "new-cert",
+						},
+					},
+					{
+						Hostname: "another.example.com",
+						TlsSecret: corev1.SecretReference{
+							Name: "another-cert",
+						},
+					},
+				},
+			},
+		},
+	}
+	_, err := newLavinMQ.ValidateUpdate(context.TODO(), oldLavinMQ, newLavinMQ)
+	assert.NoErrorf(t, err, "Valid SNI update should not error")
 }
