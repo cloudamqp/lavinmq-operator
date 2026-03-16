@@ -19,6 +19,7 @@ package v1alpha1
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -53,6 +54,9 @@ func (r *LavinMQ) ValidateCreate(ctx context.Context, obj runtime.Object) (admis
 	if lavin.Spec.Replicas > 1 && len(lavin.Spec.EtcdEndpoints) == 0 {
 		return nil, fmt.Errorf("a provided etcd cluster is required for replication")
 	}
+	if err := validateSniConfig(lavin.Spec.Config.Sni); err != nil {
+		return nil, err
+	}
 	return nil, nil
 }
 
@@ -69,10 +73,28 @@ func (r *LavinMQ) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Obj
 			return nil, fmt.Errorf("in order to safely transition without message loss from single to multi node, first update to run the single node with etcd cluster, then update to multi node")
 		}
 	}
+	if err := validateSniConfig(newLavinMQ.Spec.Config.Sni); err != nil {
+		return nil, err
+	}
 	return nil, nil
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
 func (r *LavinMQ) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
 	return nil, nil
+}
+
+// validateSniConfig validates SNI configuration
+func validateSniConfig(sniConfigs []SniConfig) error {
+	// Check for duplicate hostnames (case-insensitive, as per RFC)
+	seen := make(map[string]bool)
+	for _, sniConfig := range sniConfigs {
+		normalized := strings.ToLower(sniConfig.Hostname)
+		if seen[normalized] {
+			return fmt.Errorf("duplicate SNI hostname: %s", sniConfig.Hostname)
+		}
+		seen[normalized] = true
+	}
+
+	return nil
 }

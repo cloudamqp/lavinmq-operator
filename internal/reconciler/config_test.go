@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	v1alpha1 "github.com/cloudamqp/lavinmq-operator/api/v1alpha1"
 	"github.com/cloudamqp/lavinmq-operator/internal/reconciler"
 	testutils "github.com/cloudamqp/lavinmq-operator/internal/test_utils"
 
@@ -180,5 +181,295 @@ func TestDisablingNonTlsPorts(t *testing.T) {
 	err = k8sClient.Get(t.Context(), types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, configMap)
 	assert.NoError(t, err)
 	assert.Equal(t, instance.Name, configMap.Name)
+	verifyConfigMapEquality(t, configMap, expectedConfig)
+}
+
+func TestSniConfig(t *testing.T) {
+	t.Parallel()
+	instance := testutils.GetDefaultInstance(&testutils.DefaultInstanceSettings{})
+	err := testutils.CreateNamespace(t.Context(), k8sClient, instance.Namespace)
+	assert.NoErrorf(t, err, "Failed to create namespace")
+	defer testutils.DeleteNamespace(t.Context(), k8sClient, instance.Namespace)
+	defer k8sClient.Delete(t.Context(), instance)
+
+	instance.Spec.Config.Sni = []v1alpha1.SniConfig{
+		{
+			Hostname: "example.com",
+			TlsSecret: corev1.SecretReference{
+				Name: "example-tls",
+			},
+		},
+	}
+
+	assert.NoError(t, k8sClient.Create(t.Context(), instance))
+
+	expectedConfig := `
+	[main]
+	data_dir = /var/lib/lavinmq
+
+	[mgmt]
+	bind = 0.0.0.0
+	port = 15672
+
+	[amqp]
+	bind = 0.0.0.0
+	port = 5672
+
+	[mqtt]
+	bind = 0.0.0.0
+	port = 1883
+
+	[clustering]
+	bind = 0.0.0.0
+	port = 5679
+
+	[sni:example.com]
+	tls_cert = /etc/lavinmq/sni/example-com/tls.crt
+	tls_key = /etc/lavinmq/sni/example-com/tls.key
+	`
+
+	rc := &reconciler.ConfigReconciler{
+		ResourceReconciler: &reconciler.ResourceReconciler{
+			Instance: instance,
+			Scheme:   scheme.Scheme,
+			Client:   k8sClient,
+		},
+	}
+
+	rc.Reconcile(t.Context())
+
+	configMap := &corev1.ConfigMap{}
+	err = k8sClient.Get(t.Context(), types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, configMap)
+	assert.NoError(t, err)
+	verifyConfigMapEquality(t, configMap, expectedConfig)
+}
+
+func TestSniConfigWithMtls(t *testing.T) {
+	t.Parallel()
+	instance := testutils.GetDefaultInstance(&testutils.DefaultInstanceSettings{})
+	err := testutils.CreateNamespace(t.Context(), k8sClient, instance.Namespace)
+	assert.NoErrorf(t, err, "Failed to create namespace")
+	defer testutils.DeleteNamespace(t.Context(), k8sClient, instance.Namespace)
+	defer k8sClient.Delete(t.Context(), instance)
+
+	instance.Spec.Config.Sni = []v1alpha1.SniConfig{
+		{
+			Hostname: "secure.example.com",
+			TlsSecret: corev1.SecretReference{
+				Name: "secure-tls",
+			},
+			TlsCaSecret: &corev1.SecretReference{
+				Name: "secure-ca",
+			},
+			TlsVerifyPeer: true,
+		},
+	}
+
+	assert.NoError(t, k8sClient.Create(t.Context(), instance))
+
+	expectedConfig := `
+	[main]
+	data_dir = /var/lib/lavinmq
+
+	[mgmt]
+	bind = 0.0.0.0
+	port = 15672
+
+	[amqp]
+	bind = 0.0.0.0
+	port = 5672
+
+	[mqtt]
+	bind = 0.0.0.0
+	port = 1883
+
+	[clustering]
+	bind = 0.0.0.0
+	port = 5679
+
+	[sni:secure.example.com]
+	tls_cert = /etc/lavinmq/sni/secure-example-com/tls.crt
+	tls_key = /etc/lavinmq/sni/secure-example-com/tls.key
+	tls_ca_cert = /etc/lavinmq/sni/secure-example-com-ca/ca.crt
+	tls_verify_peer = true
+	`
+
+	rc := &reconciler.ConfigReconciler{
+		ResourceReconciler: &reconciler.ResourceReconciler{
+			Instance: instance,
+			Scheme:   scheme.Scheme,
+			Client:   k8sClient,
+		},
+	}
+
+	rc.Reconcile(t.Context())
+
+	configMap := &corev1.ConfigMap{}
+	err = k8sClient.Get(t.Context(), types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, configMap)
+	assert.NoError(t, err)
+	verifyConfigMapEquality(t, configMap, expectedConfig)
+}
+
+func TestSniConfigWithProtocolOverrides(t *testing.T) {
+	t.Parallel()
+	instance := testutils.GetDefaultInstance(&testutils.DefaultInstanceSettings{})
+	err := testutils.CreateNamespace(t.Context(), k8sClient, instance.Namespace)
+	assert.NoErrorf(t, err, "Failed to create namespace")
+	defer testutils.DeleteNamespace(t.Context(), k8sClient, instance.Namespace)
+	defer k8sClient.Delete(t.Context(), instance)
+
+	verifyPeer := true
+	instance.Spec.Config.Sni = []v1alpha1.SniConfig{
+		{
+			Hostname: "multi-protocol.example.com",
+			TlsSecret: corev1.SecretReference{
+				Name: "default-tls",
+			},
+			Amqp: &v1alpha1.SniProtocolConfig{
+				TlsSecret: &corev1.SecretReference{
+					Name: "amqp-tls",
+				},
+				TlsVerifyPeer: &verifyPeer,
+			},
+			Mqtt: &v1alpha1.SniProtocolConfig{
+				TlsSecret: &corev1.SecretReference{
+					Name: "mqtt-tls",
+				},
+			},
+			Http: &v1alpha1.SniProtocolConfig{
+				TlsSecret: &corev1.SecretReference{
+					Name: "http-tls",
+				},
+			},
+		},
+	}
+
+	assert.NoError(t, k8sClient.Create(t.Context(), instance))
+
+	expectedConfig := `
+	[main]
+	data_dir = /var/lib/lavinmq
+
+	[mgmt]
+	bind = 0.0.0.0
+	port = 15672
+
+	[amqp]
+	bind = 0.0.0.0
+	port = 5672
+
+	[mqtt]
+	bind = 0.0.0.0
+	port = 1883
+
+	[clustering]
+	bind = 0.0.0.0
+	port = 5679
+
+	[sni:multi-protocol.example.com]
+	tls_cert = /etc/lavinmq/sni/multi-protocol-example-com/tls.crt
+	tls_key = /etc/lavinmq/sni/multi-protocol-example-com/tls.key
+	amqp_tls_cert = /etc/lavinmq/sni/multi-protocol-example-com-amqp/tls.crt
+	amqp_tls_key = /etc/lavinmq/sni/multi-protocol-example-com-amqp/tls.key
+	amqp_tls_verify_peer = true
+	mqtt_tls_cert = /etc/lavinmq/sni/multi-protocol-example-com-mqtt/tls.crt
+	mqtt_tls_key = /etc/lavinmq/sni/multi-protocol-example-com-mqtt/tls.key
+	http_tls_cert = /etc/lavinmq/sni/multi-protocol-example-com-http/tls.crt
+	http_tls_key = /etc/lavinmq/sni/multi-protocol-example-com-http/tls.key
+	`
+
+	rc := &reconciler.ConfigReconciler{
+		ResourceReconciler: &reconciler.ResourceReconciler{
+			Instance: instance,
+			Scheme:   scheme.Scheme,
+			Client:   k8sClient,
+		},
+	}
+
+	rc.Reconcile(t.Context())
+
+	configMap := &corev1.ConfigMap{}
+	err = k8sClient.Get(t.Context(), types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, configMap)
+	assert.NoError(t, err)
+	verifyConfigMapEquality(t, configMap, expectedConfig)
+}
+
+func TestMultipleSniHosts(t *testing.T) {
+	t.Parallel()
+	instance := testutils.GetDefaultInstance(&testutils.DefaultInstanceSettings{})
+	err := testutils.CreateNamespace(t.Context(), k8sClient, instance.Namespace)
+	assert.NoErrorf(t, err, "Failed to create namespace")
+	defer testutils.DeleteNamespace(t.Context(), k8sClient, instance.Namespace)
+	defer k8sClient.Delete(t.Context(), instance)
+
+	instance.Spec.Config.Sni = []v1alpha1.SniConfig{
+		{
+			Hostname: "tenant1.example.com",
+			TlsSecret: corev1.SecretReference{
+				Name: "tenant1-tls",
+			},
+		},
+		{
+			Hostname: "tenant2.example.com",
+			TlsSecret: corev1.SecretReference{
+				Name: "tenant2-tls",
+			},
+		},
+		{
+			Hostname: "*.wildcard.com",
+			TlsSecret: corev1.SecretReference{
+				Name: "wildcard-tls",
+			},
+		},
+	}
+
+	assert.NoError(t, k8sClient.Create(t.Context(), instance))
+
+	expectedConfig := `
+	[main]
+	data_dir = /var/lib/lavinmq
+
+	[mgmt]
+	bind = 0.0.0.0
+	port = 15672
+
+	[amqp]
+	bind = 0.0.0.0
+	port = 5672
+
+	[mqtt]
+	bind = 0.0.0.0
+	port = 1883
+
+	[clustering]
+	bind = 0.0.0.0
+	port = 5679
+
+	[sni:tenant1.example.com]
+	tls_cert = /etc/lavinmq/sni/tenant1-example-com/tls.crt
+	tls_key = /etc/lavinmq/sni/tenant1-example-com/tls.key
+
+	[sni:tenant2.example.com]
+	tls_cert = /etc/lavinmq/sni/tenant2-example-com/tls.crt
+	tls_key = /etc/lavinmq/sni/tenant2-example-com/tls.key
+
+	[sni:*.wildcard.com]
+	tls_cert = /etc/lavinmq/sni/wildcard-wildcard-com/tls.crt
+	tls_key = /etc/lavinmq/sni/wildcard-wildcard-com/tls.key
+	`
+
+	rc := &reconciler.ConfigReconciler{
+		ResourceReconciler: &reconciler.ResourceReconciler{
+			Instance: instance,
+			Scheme:   scheme.Scheme,
+			Client:   k8sClient,
+		},
+	}
+
+	rc.Reconcile(t.Context())
+
+	configMap := &corev1.ConfigMap{}
+	err = k8sClient.Get(t.Context(), types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, configMap)
+	assert.NoError(t, err)
 	verifyConfigMapEquality(t, configMap, expectedConfig)
 }
