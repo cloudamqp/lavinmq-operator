@@ -31,3 +31,6 @@ dist
 
 # Ignore cursor rules
 .cursor
+
+# Claude Code local settings
+.claude/settings.local.json
