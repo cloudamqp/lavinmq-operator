@@ -26,3 +26,18 @@ jobs:
 
       - name: Run tests
         run: make test
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: "go.mod"
+          cache-dependency-path: |
+            go.sum
+
+      - name: Run linter
+        run: make lint
