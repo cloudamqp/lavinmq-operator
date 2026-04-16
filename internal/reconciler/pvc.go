@@ -74,7 +74,7 @@ func (b *PVCReconciler) newObjects() []corev1.PersistentVolumeClaim {
 	return pvcs
 }
 
-func (b *PVCReconciler) updateFields(ctx context.Context, pvc *corev1.PersistentVolumeClaim) error {
+func (b *PVCReconciler) updateFields(_ context.Context, pvc *corev1.PersistentVolumeClaim) error {
 	sizeComp := pvc.Spec.Resources.Requests.Storage().Cmp(*b.Instance.Spec.DataVolumeClaimSpec.Resources.Requests.Storage())
 
 	switch sizeComp {

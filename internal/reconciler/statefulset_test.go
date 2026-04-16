@@ -25,7 +25,7 @@ func TestStatefulSetReconciler(t *testing.T) {
 	assert.NoErrorf(t, err, "Failed to create namespace")
 	defer func() { _ = testutils.DeleteNamespace(t.Context(), k8sClient, instance.Namespace) }()
 
-	configMap := createConfigMap(t, instance, "initial_config")
+	configMap := createConfigMap(t, instance)
 	defer deleteConfigMap(t, configMap)
 
 	rc := &reconciler.StatefulSetReconciler{
@@ -74,7 +74,7 @@ func TestCreateContainerResources(t *testing.T) {
 	assert.NoErrorf(t, err, "Failed to create namespace")
 	defer func() { _ = testutils.DeleteNamespace(t.Context(), k8sClient, instance.Namespace) }()
 
-	configMap := createConfigMap(t, instance, "initial_config")
+	configMap := createConfigMap(t, instance)
 	defer deleteConfigMap(t, configMap)
 
 	rc := &reconciler.StatefulSetReconciler{
@@ -119,7 +119,7 @@ func TestUpdateContainerResources(t *testing.T) {
 	assert.NoErrorf(t, err, "Failed to create namespace")
 	defer func() { _ = testutils.DeleteNamespace(t.Context(), k8sClient, instance.Namespace) }()
 
-	configMap := createConfigMap(t, instance, "initial_config")
+	configMap := createConfigMap(t, instance)
 	defer deleteConfigMap(t, configMap)
 
 	rc := &reconciler.StatefulSetReconciler{
@@ -164,7 +164,7 @@ func TestStsNodeSelector(t *testing.T) {
 	assert.NoErrorf(t, err, "Failed to create namespace")
 	defer func() { _ = testutils.DeleteNamespace(t.Context(), k8sClient, instance.Namespace) }()
 
-	configMap := createConfigMap(t, instance, "initial_config")
+	configMap := createConfigMap(t, instance)
 	defer deleteConfigMap(t, configMap)
 
 	rc := &reconciler.StatefulSetReconciler{
@@ -196,7 +196,7 @@ func TestConfigHashAnnotation(t *testing.T) {
 	assert.NoErrorf(t, err, "Failed to create namespace")
 	defer func() { _ = testutils.DeleteNamespace(t.Context(), k8sClient, instance.Namespace) }()
 
-	configMap := createConfigMap(t, instance, "initial_config")
+	configMap := createConfigMap(t, instance)
 	defer deleteConfigMap(t, configMap)
 
 	rc := &reconciler.StatefulSetReconciler{
@@ -240,15 +240,14 @@ func TestConfigHashAnnotation(t *testing.T) {
 	assert.NotEqual(t, initialHash, updatedHash, "Config hash should change when ConfigMap content changes")
 }
 
-func createConfigMap(t *testing.T, instance *cloudamqpcomv1alpha1.LavinMQ, config string) *corev1.ConfigMap {
-	// Create initial ConfigMap
+func createConfigMap(t *testing.T, instance *cloudamqpcomv1alpha1.LavinMQ) *corev1.ConfigMap {
 	configMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      instance.Name,
 			Namespace: instance.Namespace,
 		},
 		Data: map[string]string{
-			reconciler.ConfigFileName: config,
+			reconciler.ConfigFileName: "initial_config",
 		},
 	}
 	err := k8sClient.Create(t.Context(), configMap)
