@@ -56,8 +56,7 @@ func (b *ConfigReconciler) Reconcile(ctx context.Context) (ctrl.Result, error) {
 	err = b.GetItem(ctx, configMap)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			b.CreateItem(ctx, configMap)
-			return ctrl.Result{}, nil
+			return ctrl.Result{}, b.CreateItem(ctx, configMap)
 		}
 
 		return ctrl.Result{}, err

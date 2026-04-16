@@ -29,8 +29,7 @@ func (b *HeadlessServiceReconciler) Reconcile(ctx context.Context) (ctrl.Result,
 	err := b.GetItem(ctx, service)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			b.CreateItem(ctx, service)
-			return ctrl.Result{}, nil
+			return ctrl.Result{}, b.CreateItem(ctx, service)
 		}
 
 		return ctrl.Result{}, err

@@ -31,9 +31,9 @@ func TestDefaultConfig(t *testing.T) {
 	instance := testutils.GetDefaultInstance(&testutils.DefaultInstanceSettings{})
 	err := testutils.CreateNamespace(t.Context(), k8sClient, instance.Namespace)
 	assert.NoErrorf(t, err, "Failed to create namespace")
-	defer testutils.DeleteNamespace(t.Context(), k8sClient, instance.Namespace)
+	defer func() { _ = testutils.DeleteNamespace(t.Context(), k8sClient, instance.Namespace) }()
 
-	defer k8sClient.Delete(t.Context(), instance)
+	defer func() { _ = k8sClient.Delete(t.Context(), instance) }()
 
 	rc := &reconciler.ConfigReconciler{
 		ResourceReconciler: &reconciler.ResourceReconciler{
@@ -45,7 +45,8 @@ func TestDefaultConfig(t *testing.T) {
 
 	assert.NoError(t, k8sClient.Create(t.Context(), instance))
 
-	rc.Reconcile(t.Context())
+	_, err = rc.Reconcile(t.Context())
+	assert.NoError(t, err)
 
 	var expectedConfig = `
 			[main]
@@ -67,7 +68,8 @@ func TestDefaultConfig(t *testing.T) {
 			bind = 0.0.0.0
 			port = 5679
 	`
-	rc.Reconcile(context.Background())
+	_, err = rc.Reconcile(context.Background())
+	assert.NoError(t, err)
 
 	configMap := &corev1.ConfigMap{}
 	err = k8sClient.Get(t.Context(), types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, configMap)
@@ -81,9 +83,9 @@ func TestCustomConfigPorts(t *testing.T) {
 	instance := testutils.GetDefaultInstance(&testutils.DefaultInstanceSettings{})
 	err := testutils.CreateNamespace(t.Context(), k8sClient, instance.Namespace)
 	assert.NoErrorf(t, err, "Failed to create namespace")
-	defer testutils.DeleteNamespace(t.Context(), k8sClient, instance.Namespace)
+	defer func() { _ = testutils.DeleteNamespace(t.Context(), k8sClient, instance.Namespace) }()
 
-	defer k8sClient.Delete(t.Context(), instance)
+	defer func() { _ = k8sClient.Delete(t.Context(), instance) }()
 
 	instance.Spec.Config.Amqp.Port = 1111
 	instance.Spec.Config.Mgmt.Port = 2222
@@ -123,7 +125,8 @@ func TestCustomConfigPorts(t *testing.T) {
 		},
 	}
 
-	rc.Reconcile(t.Context())
+	_, err = rc.Reconcile(t.Context())
+	assert.NoError(t, err)
 	configMap := &corev1.ConfigMap{}
 	err = k8sClient.Get(t.Context(), types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, configMap)
 	assert.NoError(t, err)
@@ -136,9 +139,9 @@ func TestDisablingNonTlsPorts(t *testing.T) {
 	instance := testutils.GetDefaultInstance(&testutils.DefaultInstanceSettings{})
 	err := testutils.CreateNamespace(t.Context(), k8sClient, instance.Namespace)
 	assert.NoErrorf(t, err, "Failed to create namespace")
-	defer testutils.DeleteNamespace(t.Context(), k8sClient, instance.Namespace)
+	defer func() { _ = testutils.DeleteNamespace(t.Context(), k8sClient, instance.Namespace) }()
 
-	defer k8sClient.Delete(t.Context(), instance)
+	defer func() { _ = k8sClient.Delete(t.Context(), instance) }()
 
 	instance.Spec.Config.Amqp.Port = -1
 	instance.Spec.Config.Mgmt.Port = -1
@@ -174,7 +177,8 @@ func TestDisablingNonTlsPorts(t *testing.T) {
 		},
 	}
 
-	rc.Reconcile(t.Context())
+	_, err = rc.Reconcile(t.Context())
+	assert.NoError(t, err)
 
 	configMap := &corev1.ConfigMap{}
 	err = k8sClient.Get(t.Context(), types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, configMap)
