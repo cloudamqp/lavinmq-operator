@@ -39,8 +39,7 @@ func (b *StatefulSetReconciler) Reconcile(ctx context.Context) (ctrl.Result, err
 	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		if err := b.GetItem(ctx, statefulset); err != nil {
 			if apierrors.IsNotFound(err) {
-				b.CreateItem(ctx, statefulset)
-				return nil
+				return b.CreateItem(ctx, statefulset)
 			}
 
 			return err

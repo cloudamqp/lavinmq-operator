@@ -18,9 +18,9 @@ func TestDefaultHeadlessService(t *testing.T) {
 	instance := testutils.GetDefaultInstance(&testutils.DefaultInstanceSettings{})
 	err := testutils.CreateNamespace(t.Context(), k8sClient, instance.Namespace)
 	assert.NoErrorf(t, err, "Failed to create namespace")
-	defer testutils.DeleteNamespace(t.Context(), k8sClient, instance.Namespace)
+	defer func() { _ = testutils.DeleteNamespace(t.Context(), k8sClient, instance.Namespace) }()
 
-	defer k8sClient.Delete(t.Context(), instance)
+	defer func() { _ = k8sClient.Delete(t.Context(), instance) }()
 
 	rc := &reconciler.HeadlessServiceReconciler{
 		ResourceReconciler: &reconciler.ResourceReconciler{
@@ -32,7 +32,8 @@ func TestDefaultHeadlessService(t *testing.T) {
 
 	assert.NoError(t, k8sClient.Create(t.Context(), instance))
 
-	rc.Reconcile(t.Context())
+	_, err = rc.Reconcile(t.Context())
+	assert.NoError(t, err)
 
 	service := &corev1.Service{}
 	assert.NoError(t, k8sClient.Get(t.Context(), types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, service))
@@ -46,9 +47,9 @@ func TestCustomPorts(t *testing.T) {
 	instance := testutils.GetDefaultInstance(&testutils.DefaultInstanceSettings{})
 	err := testutils.CreateNamespace(t.Context(), k8sClient, instance.Namespace)
 	assert.NoErrorf(t, err, "Failed to create namespace")
-	defer testutils.DeleteNamespace(t.Context(), k8sClient, instance.Namespace)
+	defer func() { _ = testutils.DeleteNamespace(t.Context(), k8sClient, instance.Namespace) }()
 
-	defer k8sClient.Delete(t.Context(), instance)
+	defer func() { _ = k8sClient.Delete(t.Context(), instance) }()
 
 	instance.Spec.Config.Amqp.Port = 1111
 	instance.Spec.Config.Mgmt.Port = 2222
@@ -66,7 +67,8 @@ func TestCustomPorts(t *testing.T) {
 		},
 	}
 
-	rc.Reconcile(t.Context())
+	_, err = rc.Reconcile(t.Context())
+	assert.NoError(t, err)
 
 	service := &corev1.Service{}
 	assert.NoError(t, k8sClient.Get(t.Context(), types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, service))
@@ -103,9 +105,9 @@ func TestClusteringPort(t *testing.T) {
 	instance := testutils.GetDefaultInstance(&testutils.DefaultInstanceSettings{})
 	err := testutils.CreateNamespace(t.Context(), k8sClient, instance.Namespace)
 	assert.NoErrorf(t, err, "Failed to create namespace")
-	defer testutils.DeleteNamespace(t.Context(), k8sClient, instance.Namespace)
+	defer func() { _ = testutils.DeleteNamespace(t.Context(), k8sClient, instance.Namespace) }()
 
-	defer k8sClient.Delete(t.Context(), instance)
+	defer func() { _ = k8sClient.Delete(t.Context(), instance) }()
 
 	instance.Spec.EtcdEndpoints = []string{"etcd-0:2379"}
 	assert.NoError(t, k8sClient.Create(t.Context(), instance))
@@ -118,7 +120,8 @@ func TestClusteringPort(t *testing.T) {
 		},
 	}
 
-	rc.Reconcile(t.Context())
+	_, err = rc.Reconcile(t.Context())
+	assert.NoError(t, err)
 
 	service := &corev1.Service{}
 	assert.NoError(t, k8sClient.Get(t.Context(), types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, service))
@@ -135,9 +138,9 @@ func TestPortChanges(t *testing.T) {
 	instance := testutils.GetDefaultInstance(&testutils.DefaultInstanceSettings{})
 	err := testutils.CreateNamespace(t.Context(), k8sClient, instance.Namespace)
 	assert.NoErrorf(t, err, "Failed to create namespace")
-	defer testutils.DeleteNamespace(t.Context(), k8sClient, instance.Namespace)
+	defer func() { _ = testutils.DeleteNamespace(t.Context(), k8sClient, instance.Namespace) }()
 
-	defer k8sClient.Delete(t.Context(), instance)
+	defer func() { _ = k8sClient.Delete(t.Context(), instance) }()
 
 	instance.Spec.Config.Amqp.Port = 5672
 	assert.NoError(t, k8sClient.Create(t.Context(), instance))
@@ -150,7 +153,8 @@ func TestPortChanges(t *testing.T) {
 		},
 	}
 
-	rc.Reconcile(t.Context())
+	_, err = rc.Reconcile(t.Context())
+	assert.NoError(t, err)
 
 	service := &corev1.Service{}
 	assert.NoError(t, k8sClient.Get(t.Context(), types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, service))
@@ -162,7 +166,8 @@ func TestPortChanges(t *testing.T) {
 	instance.Spec.Config.Amqp.Port = 1111
 	assert.NoError(t, k8sClient.Update(t.Context(), instance))
 
-	rc.Reconcile(t.Context())
+	_, err = rc.Reconcile(t.Context())
+	assert.NoError(t, err)
 
 	assert.NoError(t, k8sClient.Get(t.Context(), types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, service))
 	idx = slices.IndexFunc(service.Spec.Ports, func(port corev1.ServicePort) bool {

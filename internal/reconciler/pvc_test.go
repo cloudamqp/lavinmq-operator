@@ -23,7 +23,7 @@ func TestDefaultPVCReconciler(t *testing.T) {
 	instance := testutils.GetDefaultInstance(&testutils.DefaultInstanceSettings{})
 	err := testutils.CreateNamespace(t.Context(), k8sClient, instance.Namespace)
 	assert.NoErrorf(t, err, "Failed to create namespace")
-	defer testutils.DeleteNamespace(t.Context(), k8sClient, instance.Namespace)
+	defer func() { _ = testutils.DeleteNamespace(t.Context(), k8sClient, instance.Namespace) }()
 
 	rc := &reconciler.PVCReconciler{
 		ResourceReconciler: &reconciler.ResourceReconciler{
@@ -38,7 +38,8 @@ func TestDefaultPVCReconciler(t *testing.T) {
 
 	defer cleanupPvcResources(t, instance)
 
-	rc.Reconcile(t.Context())
+	_, err = rc.Reconcile(t.Context())
+	assert.NoError(t, err)
 
 	pvc := &corev1.PersistentVolumeClaim{}
 	assert.NoError(t, k8sClient.Get(t.Context(), types.NamespacedName{Name: fmt.Sprintf("data-%s-0", instance.Name), Namespace: instance.Namespace}, pvc))
@@ -56,7 +57,7 @@ func TestNoChangesToPVC(t *testing.T) {
 	instance := testutils.GetDefaultInstance(&testutils.DefaultInstanceSettings{})
 	err := testutils.CreateNamespace(t.Context(), k8sClient, instance.Namespace)
 	assert.NoErrorf(t, err, "Failed to create namespace")
-	defer testutils.DeleteNamespace(t.Context(), k8sClient, instance.Namespace)
+	defer func() { _ = testutils.DeleteNamespace(t.Context(), k8sClient, instance.Namespace) }()
 
 	rc := &reconciler.PVCReconciler{
 		ResourceReconciler: &reconciler.ResourceReconciler{
@@ -92,12 +93,12 @@ func TestNoChangesToPVC(t *testing.T) {
 func TestStorageSizeIncrease(t *testing.T) {
 	t.Parallel()
 	storageClass := createStorageClass(t)
-	defer k8sClient.Delete(t.Context(), storageClass)
+	defer func() { _ = k8sClient.Delete(t.Context(), storageClass) }()
 
 	instance := testutils.GetDefaultInstance(&testutils.DefaultInstanceSettings{})
 	err := testutils.CreateNamespace(t.Context(), k8sClient, instance.Namespace)
 	assert.NoErrorf(t, err, "Failed to create namespace")
-	defer testutils.DeleteNamespace(t.Context(), k8sClient, instance.Namespace)
+	defer func() { _ = testutils.DeleteNamespace(t.Context(), k8sClient, instance.Namespace) }()
 
 	instance.Spec.DataVolumeClaimSpec.StorageClassName = &[]string{storageClass.Name}[0]
 	rc := &reconciler.PVCReconciler{
@@ -113,7 +114,8 @@ func TestStorageSizeIncrease(t *testing.T) {
 
 	defer cleanupPvcResources(t, instance)
 
-	rc.Reconcile(t.Context())
+	_, err = rc.Reconcile(t.Context())
+	assert.NoError(t, err)
 
 	t.Log("Setting the PVC to bound")
 	pvc := &corev1.PersistentVolumeClaim{}
@@ -139,7 +141,7 @@ func TestStorageSizeDecrease(t *testing.T) {
 	instance := testutils.GetDefaultInstance(&testutils.DefaultInstanceSettings{})
 	err := testutils.CreateNamespace(t.Context(), k8sClient, instance.Namespace)
 	assert.NoErrorf(t, err, "Failed to create namespace")
-	defer testutils.DeleteNamespace(t.Context(), k8sClient, instance.Namespace)
+	defer func() { _ = testutils.DeleteNamespace(t.Context(), k8sClient, instance.Namespace) }()
 
 	rc := &reconciler.PVCReconciler{
 		ResourceReconciler: &reconciler.ResourceReconciler{

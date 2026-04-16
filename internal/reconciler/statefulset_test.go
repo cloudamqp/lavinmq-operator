@@ -23,7 +23,7 @@ func TestStatefulSetReconciler(t *testing.T) {
 
 	err := testutils.CreateNamespace(t.Context(), k8sClient, instance.Namespace)
 	assert.NoErrorf(t, err, "Failed to create namespace")
-	defer testutils.DeleteNamespace(t.Context(), k8sClient, instance.Namespace)
+	defer func() { _ = testutils.DeleteNamespace(t.Context(), k8sClient, instance.Namespace) }()
 
 	configMap := createConfigMap(t, instance, "initial_config")
 	defer deleteConfigMap(t, configMap)
@@ -72,7 +72,7 @@ func TestCreateContainerResources(t *testing.T) {
 
 	err := testutils.CreateNamespace(t.Context(), k8sClient, instance.Namespace)
 	assert.NoErrorf(t, err, "Failed to create namespace")
-	defer testutils.DeleteNamespace(t.Context(), k8sClient, instance.Namespace)
+	defer func() { _ = testutils.DeleteNamespace(t.Context(), k8sClient, instance.Namespace) }()
 
 	configMap := createConfigMap(t, instance, "initial_config")
 	defer deleteConfigMap(t, configMap)
@@ -117,7 +117,7 @@ func TestUpdateContainerResources(t *testing.T) {
 
 	err := testutils.CreateNamespace(t.Context(), k8sClient, instance.Namespace)
 	assert.NoErrorf(t, err, "Failed to create namespace")
-	defer testutils.DeleteNamespace(t.Context(), k8sClient, instance.Namespace)
+	defer func() { _ = testutils.DeleteNamespace(t.Context(), k8sClient, instance.Namespace) }()
 
 	configMap := createConfigMap(t, instance, "initial_config")
 	defer deleteConfigMap(t, configMap)
@@ -162,7 +162,7 @@ func TestStsNodeSelector(t *testing.T) {
 
 	err := testutils.CreateNamespace(t.Context(), k8sClient, instance.Namespace)
 	assert.NoErrorf(t, err, "Failed to create namespace")
-	defer testutils.DeleteNamespace(t.Context(), k8sClient, instance.Namespace)
+	defer func() { _ = testutils.DeleteNamespace(t.Context(), k8sClient, instance.Namespace) }()
 
 	configMap := createConfigMap(t, instance, "initial_config")
 	defer deleteConfigMap(t, configMap)
@@ -194,7 +194,7 @@ func TestConfigHashAnnotation(t *testing.T) {
 
 	err := testutils.CreateNamespace(t.Context(), k8sClient, instance.Namespace)
 	assert.NoErrorf(t, err, "Failed to create namespace")
-	defer testutils.DeleteNamespace(t.Context(), k8sClient, instance.Namespace)
+	defer func() { _ = testutils.DeleteNamespace(t.Context(), k8sClient, instance.Namespace) }()
 
 	configMap := createConfigMap(t, instance, "initial_config")
 	defer deleteConfigMap(t, configMap)
