@@ -120,11 +120,14 @@ func TestCreateLavinMQ(t *testing.T) {
 			err = r.Get(ctx, lavinPod.ObjectMeta.GetName(), namespace, lavinPod)
 			assert.NoErrorf(t, err, "Failed to get LavinMQ pod")
 
-			err = wait.For(conditions.New(r).PodRunning(lavinPod), wait.WithTimeout(time.Minute), wait.WithInterval(time.Second*5))
+			err = wait.For(conditions.New(r).PodRunning(lavinPod),
+				wait.WithTimeout(time.Minute), wait.WithInterval(time.Second*5))
 			assert.NoErrorf(t, err, "Failed to wait for LavinMQ pod to be running")
 
 			var stdout, stderr bytes.Buffer
-			err = r.ExecInPod(ctx, namespace, lavinPod.Name, lavinPod.Spec.Containers[0].Name, []string{"lavinmqctl", "status"}, &stdout, &stderr)
+			err = r.ExecInPod(ctx, namespace, lavinPod.Name,
+				lavinPod.Spec.Containers[0].Name,
+				[]string{"lavinmqctl", "status"}, &stdout, &stderr)
 			assert.NoErrorf(t, err, "Failed to execute lavinmqctl status", stderr.String())
 
 			if !strings.Contains(stdout.String(), fmt.Sprintf("%s-0", instanceName)) {
