@@ -16,6 +16,9 @@ issues:
       linters:
         - dupl
         - lll
+    - path: "_test\\.go"
+      linters:
+        - goconst
 linters:
   disable-all: true
   enable:
