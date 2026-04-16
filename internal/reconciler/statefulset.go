@@ -311,7 +311,7 @@ func (b *StatefulSetReconciler) setConfigHashAnnotation(ctx context.Context, sts
 }
 
 func (b *StatefulSetReconciler) updateFields(ctx context.Context, sts *appsv1.StatefulSet) error {
-	if *sts.Spec.Replicas != int32(b.Instance.Spec.Replicas) {
+	if *sts.Spec.Replicas != b.Instance.Spec.Replicas {
 		b.Logger.Info("Replicas changed", "old", sts.Spec.Replicas, "new", b.Instance.Spec.Replicas)
 		// TODO: Add support for scaling.
 		sts.Spec.Replicas = &b.Instance.Spec.Replicas
