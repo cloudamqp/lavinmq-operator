@@ -196,9 +196,9 @@ func InstallingOperator() error {
 		return fmt.Errorf("failed to wait for controller to be ready: %w", err)
 	}
 
-	cmd = exec.Command("kubectl", "wait", "validatingwebhookconfiguration/lavinmq-operator-validating-webhook-configuration",
-		"--for", "create",
-		"--timeout", "2m")
+	cmd = exec.Command("kubectl", "wait",
+		"validatingwebhookconfiguration/lavinmq-operator-validating-webhook-configuration",
+		"--for", "create", "--timeout", "2m")
 
 	_, err = Run(cmd)
 	if err != nil {
