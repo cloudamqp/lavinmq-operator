@@ -33,14 +33,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-// Definitions to manage status conditions
-const (
-	// typeAvailableLavinMQ represents the status of the StatefulSet reconciliation
-	typeAvailableLavinMQ = "Available"
-	// typeDegradedLavinMQ represents the status used when the custom resource is deleted and the finalizer operations are yet to occur.
-	typeDegradedLavinMQ = "Degraded"
-)
-
 // LavinMQReconciler reconciles a LavinMQ object
 type LavinMQReconciler struct {
 	client.Client
