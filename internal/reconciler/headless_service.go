@@ -101,7 +101,7 @@ func appendServicePorts(servicePorts []corev1.ServicePort, port int32, name stri
 	return servicePorts
 }
 
-func (b *HeadlessServiceReconciler) updateFields(ctx context.Context, service *corev1.Service) {
+func (b *HeadlessServiceReconciler) updateFields(_ context.Context, service *corev1.Service) {
 	newService := b.newObject()
 
 	if !reflect.DeepEqual(service.Spec.Ports, newService.Spec.Ports) {
