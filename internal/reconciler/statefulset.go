@@ -360,6 +360,11 @@ func (b *StatefulSetReconciler) diffTemplate(old *corev1.PodSpec) {
 		old.NodeSelector = b.Instance.Spec.NodeSelector
 	}
 
+	if !reflect.DeepEqual(old.ImagePullSecrets, b.Instance.Spec.ImagePullSecrets) {
+		b.Logger.Info("imagePullSecrets changed, updating")
+		old.ImagePullSecrets = b.Instance.Spec.ImagePullSecrets
+	}
+
 	index := slices.IndexFunc(old.Volumes, func(v corev1.Volume) bool {
 		return v.Name == "tls"
 	})
