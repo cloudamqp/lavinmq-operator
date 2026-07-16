@@ -192,6 +192,10 @@ func (b *StatefulSetReconciler) appendSpec(sts *appsv1.StatefulSet) *appsv1.Stat
 		},
 	}
 
+	if b.Instance.Spec.ImagePullSecrets != nil {
+		sts.Spec.Template.Spec.ImagePullSecrets = b.Instance.Spec.ImagePullSecrets
+	}
+
 	return sts
 }
 func (b *StatefulSetReconciler) portsFromSpec() []corev1.ContainerPort {
