@@ -268,8 +268,7 @@ func TestImagePullSecrets(t *testing.T) {
 
 	err := testutils.CreateNamespace(t.Context(), k8sClient, instance.Namespace)
 	assert.NoErrorf(t, err, "Failed to create namespace")
-	defer testutils.DeleteNamespace(t.Context(), k8sClient, instance.Namespace)
-
+	defer func() { _ = testutils.DeleteNamespace(t.Context(), k8sClient, instance.Namespace) }()
 	configMap := createConfigMap(t, instance)
 	defer deleteConfigMap(t, configMap)
 
