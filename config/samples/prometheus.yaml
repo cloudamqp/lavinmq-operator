@@ -1,0 +1,200 @@
+
+# Requires prometheus-operator to be installed and grafana-operator to be installed
+# https://prometheus-operator.dev/docs/getting-started/installation/
+# https://grafana.github.io/grafana-operator/docs/installation/kustomize/
+
+apiVersion: monitoring.coreos.com/v1
+kind: Prometheus
+metadata:
+  name: prometheus
+spec:
+  serviceAccountName: prometheus-operator
+  serviceMonitorSelector:
+    matchLabels:
+      team: frontend
+  retention: 1d
+  scrapeInterval: 15s
+  scrapeTimeout: 10s
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: lavinmq-sample
+  labels:
+    team: frontend
+spec:
+  selector:
+    matchLabels:
+      app: lavinmq-sample
+  endpoints:
+  - port: http
+    basicAuth:
+      username: 
+        name: lavinmq-sample-basic-auth
+        key: username
+      password: 
+        name: lavinmq-sample-basic-auth
+        key: password
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: lavinmq-sample-basic-auth
+type: Opaque
+data:
+  username: Z3Vlc3Q=
+  password: Z3Vlc3Q=
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: prometheus-operator-service-reader
+rules:
+- apiGroups: [""]
+  resources: ["services", "endpoints", "pods"]
+  verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: prometheus-operator-service-reader-binding
+subjects:
+- kind: ServiceAccount
+  name: prometheus-operator
+  namespace: default
+roleRef:
+  kind: ClusterRole
+  name: prometheus-operator-service-reader
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: Grafana
+metadata:
+  name: grafana
+  labels:
+    dashboards: "grafana"
+spec:
+  config:
+    log:
+      mode: "console"
+    security:
+      admin_user: root
+      admin_password: secret
+    server:
+      root_url: http://localhost:3000
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: lavinmq-overview
+  labels:
+    app: lavinmq
+spec:
+  instanceSelector:
+    matchLabels:
+      dashboards: grafana
+      app: lavinmq-sample
+  json: |
+    {
+      "annotations": {
+        "list": []
+      },
+      "editable": true,
+      "fiscalYearStartMonth": 0,
+      "graphTooltip": 0,
+      "links": [],
+      "liveNow": false,
+      "panels": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 0,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "auto",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 0
+          },
+          "id": 1,
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "single",
+              "sort": "none"
+            }
+          },
+          "title": "LavinMQ Overview",
+          "type": "timeseries"
+        }
+      ],
+      "refresh": "5s",
+      "schemaVersion": 38,
+      "style": "dark",
+      "tags": [],
+      "templating": {
+        "list": []
+      },
+      "time": {
+        "from": "now-6h",
+        "to": "now"
+      },
+      "timepicker": {},
+      "timezone": "",
+      "title": "LavinMQ Overview",
+      "version": 0,
+      "weekStart": ""
+    }
