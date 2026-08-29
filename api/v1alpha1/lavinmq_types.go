@@ -33,6 +33,9 @@ type LavinMQSpec struct {
 	// +optional
 	Image string `json:"image,omitempty"`
 
+	// +optional
+	ImagePullSecrets []corev1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
+
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:validation:Maximum=3
 	// +kubebuilder:default=1

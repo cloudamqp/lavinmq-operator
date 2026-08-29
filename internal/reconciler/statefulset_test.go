@@ -260,3 +260,60 @@ func deleteConfigMap(t *testing.T, configMap *corev1.ConfigMap) {
 	err := k8sClient.Delete(t.Context(), configMap)
 	assert.NoErrorf(t, err, "Failed to delete ConfigMap")
 }
+
+func TestImagePullSecrets(t *testing.T) {
+	t.Parallel()
+	instance := testutils.GetDefaultInstance(&testutils.DefaultInstanceSettings{})
+	instance.Spec.ImagePullSecrets = []corev1.LocalObjectReference{{Name: "registry-creds"}}
+
+	err := testutils.CreateNamespace(t.Context(), k8sClient, instance.Namespace)
+	assert.NoErrorf(t, err, "Failed to create namespace")
+	defer func() { _ = testutils.DeleteNamespace(t.Context(), k8sClient, instance.Namespace) }()
+	configMap := createConfigMap(t, instance)
+	defer deleteConfigMap(t, configMap)
+
+	rc := &reconciler.StatefulSetReconciler{
+		ResourceReconciler: &reconciler.ResourceReconciler{
+			Instance: instance,
+			Scheme:   scheme.Scheme,
+			Client:   k8sClient,
+		},
+	}
+
+	err = k8sClient.Create(t.Context(), instance)
+	assert.NoErrorf(t, err, "Failed to create instance")
+
+	// Created StatefulSet carries the pull secrets
+	_, err = rc.Reconcile(t.Context())
+	assert.NoErrorf(t, err, "Failed to reconcile instance")
+
+	sts := &appsv1.StatefulSet{}
+	stsName := types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}
+	err = k8sClient.Get(t.Context(), stsName, sts)
+	assert.NoErrorf(t, err, "Failed to get statefulset")
+	assert.Equal(t, []corev1.LocalObjectReference{{Name: "registry-creds"}}, sts.Spec.Template.Spec.ImagePullSecrets)
+
+	// Changing the secret propagates to the existing StatefulSet
+	instance.Spec.ImagePullSecrets = []corev1.LocalObjectReference{{Name: "other-creds"}}
+	err = k8sClient.Update(t.Context(), instance)
+	assert.NoErrorf(t, err, "Failed to update instance")
+
+	_, err = rc.Reconcile(t.Context())
+	assert.NoErrorf(t, err, "Failed to reconcile instance")
+
+	err = k8sClient.Get(t.Context(), stsName, sts)
+	assert.NoErrorf(t, err, "Failed to get statefulset")
+	assert.Equal(t, []corev1.LocalObjectReference{{Name: "other-creds"}}, sts.Spec.Template.Spec.ImagePullSecrets)
+
+	// Removing the secrets clears them from the StatefulSet
+	instance.Spec.ImagePullSecrets = nil
+	err = k8sClient.Update(t.Context(), instance)
+	assert.NoErrorf(t, err, "Failed to update instance")
+
+	_, err = rc.Reconcile(t.Context())
+	assert.NoErrorf(t, err, "Failed to reconcile instance")
+
+	err = k8sClient.Get(t.Context(), stsName, sts)
+	assert.NoErrorf(t, err, "Failed to get statefulset")
+	assert.Empty(t, sts.Spec.Template.Spec.ImagePullSecrets)
+}
