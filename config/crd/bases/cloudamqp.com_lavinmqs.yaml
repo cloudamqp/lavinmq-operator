@@ -196,6 +196,159 @@ spec:
                         minimum: 0
                         type: integer
                     type: object
+                  sni:
+                    items:
+                      description: SniConfig defines TLS configuration for a specific
+                        hostname via SNI
+                      properties:
+                        amqp:
+                          description: Protocol-specific overrides for AMQP
+                          properties:
+                            tls_ca_secret:
+                              description: Optional reference to a CA certificate
+                                secret
+                              properties:
+                                name:
+                                  description: name is unique within a namespace to
+                                    reference a secret resource.
+                                  type: string
+                                namespace:
+                                  description: namespace defines the space within
+                                    which the secret name must be unique.
+                                  type: string
+                              type: object
+                              x-kubernetes-map-type: atomic
+                            tls_secret:
+                              description: Reference to a Kubernetes TLS secret for
+                                protocol-specific cert
+                              properties:
+                                name:
+                                  description: name is unique within a namespace to
+                                    reference a secret resource.
+                                  type: string
+                                namespace:
+                                  description: namespace defines the space within
+                                    which the secret name must be unique.
+                                  type: string
+                              type: object
+                              x-kubernetes-map-type: atomic
+                            tls_verify_peer:
+                              description: Enable client certificate verification
+                                (pointer to distinguish unset from false)
+                              type: boolean
+                          type: object
+                        hostname:
+                          description: Hostname for SNI (supports wildcards like *.example.com)
+                          minLength: 1
+                          type: string
+                        http:
+                          description: Protocol-specific overrides for HTTP
+                          properties:
+                            tls_ca_secret:
+                              description: Optional reference to a CA certificate
+                                secret
+                              properties:
+                                name:
+                                  description: name is unique within a namespace to
+                                    reference a secret resource.
+                                  type: string
+                                namespace:
+                                  description: namespace defines the space within
+                                    which the secret name must be unique.
+                                  type: string
+                              type: object
+                              x-kubernetes-map-type: atomic
+                            tls_secret:
+                              description: Reference to a Kubernetes TLS secret for
+                                protocol-specific cert
+                              properties:
+                                name:
+                                  description: name is unique within a namespace to
+                                    reference a secret resource.
+                                  type: string
+                                namespace:
+                                  description: namespace defines the space within
+                                    which the secret name must be unique.
+                                  type: string
+                              type: object
+                              x-kubernetes-map-type: atomic
+                            tls_verify_peer:
+                              description: Enable client certificate verification
+                                (pointer to distinguish unset from false)
+                              type: boolean
+                          type: object
+                        mqtt:
+                          description: Protocol-specific overrides for MQTT
+                          properties:
+                            tls_ca_secret:
+                              description: Optional reference to a CA certificate
+                                secret
+                              properties:
+                                name:
+                                  description: name is unique within a namespace to
+                                    reference a secret resource.
+                                  type: string
+                                namespace:
+                                  description: namespace defines the space within
+                                    which the secret name must be unique.
+                                  type: string
+                              type: object
+                              x-kubernetes-map-type: atomic
+                            tls_secret:
+                              description: Reference to a Kubernetes TLS secret for
+                                protocol-specific cert
+                              properties:
+                                name:
+                                  description: name is unique within a namespace to
+                                    reference a secret resource.
+                                  type: string
+                                namespace:
+                                  description: namespace defines the space within
+                                    which the secret name must be unique.
+                                  type: string
+                              type: object
+                              x-kubernetes-map-type: atomic
+                            tls_verify_peer:
+                              description: Enable client certificate verification
+                                (pointer to distinguish unset from false)
+                              type: boolean
+                          type: object
+                        tls_ca_secret:
+                          description: Optional reference to a CA certificate secret
+                            for mTLS
+                          properties:
+                            name:
+                              description: name is unique within a namespace to reference
+                                a secret resource.
+                              type: string
+                            namespace:
+                              description: namespace defines the space within which
+                                the secret name must be unique.
+                              type: string
+                          type: object
+                          x-kubernetes-map-type: atomic
+                        tls_secret:
+                          description: Reference to a Kubernetes TLS secret containing
+                            tls.crt and tls.key
+                          properties:
+                            name:
+                              description: name is unique within a namespace to reference
+                                a secret resource.
+                              type: string
+                            namespace:
+                              description: namespace defines the space within which
+                                the secret name must be unique.
+                              type: string
+                          type: object
+                          x-kubernetes-map-type: atomic
+                        tls_verify_peer:
+                          description: Enable client certificate verification
+                          type: boolean
+                      required:
+                      - hostname
+                      - tls_secret
+                      type: object
+                    type: array
                 type: object
               dataVolumeClaim:
                 description: Will override the accessmode and force it to ReadWriteOnce
@@ -399,7 +552,7 @@ spec:
                   type: string
                 type: array
               image:
-                default: cloudamqp/lavinmq:2.4.1
+                default: cloudamqp/lavinmq:2.7.0
                 type: string
               nodeSelector:
                 additionalProperties:
