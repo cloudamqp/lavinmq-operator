@@ -192,6 +192,10 @@ func (b *StatefulSetReconciler) appendSpec(sts *appsv1.StatefulSet) *appsv1.Stat
 		},
 	}
 
+	if b.Instance.Spec.ImagePullSecrets != nil {
+		sts.Spec.Template.Spec.ImagePullSecrets = b.Instance.Spec.ImagePullSecrets
+	}
+
 	return sts
 }
 func (b *StatefulSetReconciler) portsFromSpec() []corev1.ContainerPort {
@@ -354,6 +358,11 @@ func (b *StatefulSetReconciler) diffTemplate(old *corev1.PodSpec) {
 	if !reflect.DeepEqual(old.NodeSelector, b.Instance.Spec.NodeSelector) {
 		b.Logger.Info("nodeSelector changed, updating")
 		old.NodeSelector = b.Instance.Spec.NodeSelector
+	}
+
+	if !reflect.DeepEqual(old.ImagePullSecrets, b.Instance.Spec.ImagePullSecrets) {
+		b.Logger.Info("imagePullSecrets changed, updating")
+		old.ImagePullSecrets = b.Instance.Spec.ImagePullSecrets
 	}
 
 	index := slices.IndexFunc(old.Volumes, func(v corev1.Volume) bool {
